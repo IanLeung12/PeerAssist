@@ -2,11 +2,12 @@ import com.sun.org.apache.xpath.internal.operations.String;
 import org.apache.pdfbox.pdmodel.PDDocument;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Scanner;
 
-public class Work {
+public class Work extends PDDocument {
     PDDocument document;
     private double maxMark;
     private double avgMark;
@@ -16,7 +17,11 @@ public class Work {
 
 
     Work(String pathname, double maxMark, double avgMark, int gradeLevel, ArrayList<String> topics, ArrayList<Review> reviews) {
-        this.document = PDDocument.load(new File(pathname));
+        try {
+            this.document = PDDocument.load(new File(java.lang.String.valueOf(pathname)));
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
         this.maxMark = maxMark;
         this.avgMark = avgMark;
         this.gradeLevel = gradeLevel;
@@ -29,10 +34,6 @@ public class Work {
 
 
 
-    }
-
-    public PDDocument getDocument() {
-        return document;
     }
 
     public void setDocument(PDDocument document) {
@@ -71,21 +72,21 @@ public class Work {
         this.reviews = reviews;
     }
 
-    public class MarkComparator implements Comparator<Work> {
+    public static class MarkComparator implements Comparator<Work> {
         @Override
         public int compare(Work o1, Work o2) {
             return (int) (o1.avgMark - o2.avgMark);
         }
     }
 
-    public class GradeComparator implements Comparator<Work> {
+    public static class GradeComparator implements Comparator<Work> {
         @Override
         public int compare(Work o1, Work o2) {
             return (int) (o1.gradeLevel - o2.gradeLevel);
         }
     }
 
-    public class ReviewComparator implements Comparator<Work> {
+    public static class ReviewComparator implements Comparator<Work> {
         @Override
         public int compare(Work o1, Work o2) {
             return (int) (o1.reviews.size() - o2.reviews.size());
