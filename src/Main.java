@@ -1,17 +1,39 @@
-// Press Shift twice to open the Search Everywhere dialog and type `show whitespaces`,
-// then press Enter. You can now see whitespace characters in your code.
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Scanner;
+import java.util.Set;
+
 public class Main {
     public static void main(String[] args) {
-        // Press Alt+Enter with your caret at the highlighted text to see how
-        // IntelliJ IDEA suggests fixing it.
-        System.out.printf("Hello and welcome!");
+        Set<User> users = new HashSet<>();
+        Scanner scanner = new Scanner(System.in);
 
-        // Press Shift+F10 or click the green arrow button in the gutter to run the code.
-        for (int i = 1; i <= 5; i++) {
+        System.out.print("Enter ID: ");
+        int ID = scanner.nextInt();
+        scanner.nextLine(); // Consume the newline character
 
-            // Press Shift+F9 to start debugging your code. We have set one breakpoint
-            // for you, but you can always add more by pressing Ctrl+F8.
-            System.out.println("i = " + i);
+        System.out.print("Enter name: ");
+        String name = scanner.nextLine();
+
+        System.out.print("Enter education: ");
+        String education = scanner.nextLine();
+
+        System.out.print("Enter email: ");
+        String email = scanner.nextLine();
+
+        System.out.print("Enter password: ");
+        String password = scanner.nextLine();
+
+        System.out.print("Enter topics (comma-separated): ");
+        String topicsInput = scanner.nextLine();
+        String[] topicsArray = topicsInput.split(",");
+        ArrayList<String> topics = new ArrayList<>();
+        for (String topic : topicsArray) {
+            topics.add(topic.trim());
         }
+
+        // Creating a new User object using the input
+        users.add(new User(ID, name, education, email, password, topics));
+
     }
 }
