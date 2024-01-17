@@ -103,7 +103,7 @@ public class Display {
             g2d.setColor(Color.white);
             g2d.fill(shape);
         } finally {
-            // Restore the original state
+            // Restore the ginal state
             g2d.setTransform(originalTransform);
             g2d.setStroke(originalStroke);
             g2d.setColor(originalColor);
