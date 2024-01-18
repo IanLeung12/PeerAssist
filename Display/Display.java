@@ -13,25 +13,25 @@ public class Display {
 
     private JFrame frame;
     private JLayeredPane lframe;
-    private JPanel gPanel = new JPanel();
-    private JPanel bPanel = new JPanel();
+    private JPanel gPanel;
+    private JPanel iPanel = new JPanel();
     Dimension size = Toolkit.getDefaultToolkit().getScreenSize();
 
     public Display() {
-        this.frame = new JFrame("Login");
+        this.frame = new JFrame("Display");
         lframe = new JLayeredPane();
         lframe.setBounds(0, 0, size.width, size.height);
 
-        gPanel = new GridAreaPanel();
+        gPanel = new DrawPanel();
         gPanel.setBackground(new Color(25, 100, 23));
         gPanel.setBounds(0, 0, size.width, size.height);
         gPanel.setOpaque(true);
-        bPanel = addButtons();
-        bPanel.setBounds(0, 0, size.width, size.height);
-        bPanel.setOpaque(false);
+        iPanel = addInterface();
+        iPanel.setBounds(0, 0, size.width, size.height);
+        iPanel.setOpaque(false);
 
         lframe.add(gPanel, 0, 0);
-        lframe.add(bPanel, 1, 0);
+        lframe.add(iPanel, 1, 0);
 
         frame.add(lframe);
         frame.pack();
@@ -41,7 +41,7 @@ public class Display {
         frame.setVisible(true);
     }
 
-    private JPanel addButtons() {
+    private JPanel addInterface() {
         JPanel buttonPanel = new JPanel();
         JButton button = new JButton("Example");
 
@@ -72,14 +72,14 @@ public class Display {
     }
 
     public void refresh() {
-        SwingUtilities.invokeLater(() ->frame.repaint());
+        frame.repaint();
 
     }
 
-    class GridAreaPanel extends JPanel {
+    class DrawPanel extends JPanel {
 
         public void paintComponent(Graphics g) {
-
+            super.paintComponent(g);
 
             setDoubleBuffered(true);
 
@@ -88,29 +88,4 @@ public class Display {
         }
     }
 
-    private void drawBorderedString(String str, int x, int y, float size, float stroke, Graphics2D g2d) {
-        AffineTransform originalTransform = g2d.getTransform();
-        Stroke originalStroke = g2d.getStroke();
-        Color originalColor = g2d.getColor();
-
-        try {
-            g2d.translate(x, y);
-
-            g2d.setColor(Color.black);
-            FontRenderContext frc = g2d.getFontRenderContext();
-            TextLayout tl = new TextLayout(str, g2d.getFont().deriveFont(size), frc);
-            Shape shape = tl.getOutline(null);
-
-            g2d.setStroke(new BasicStroke(stroke));
-            g2d.draw(shape);
-
-            g2d.setColor(Color.white);
-            g2d.fill(shape);
-        } finally {
-            // Restore the ginal state
-            g2d.setTransform(originalTransform);
-            g2d.setStroke(originalStroke);
-            g2d.setColor(originalColor);
-        }
-    }
 }

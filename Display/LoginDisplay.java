@@ -1,9 +1,4 @@
 import java.awt.Graphics;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.awt.font.FontRenderContext;
-import java.awt.font.TextLayout;
-import java.awt.geom.AffineTransform;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
@@ -17,7 +12,7 @@ public class LoginDisplay {
     private JFrame frame;
     private JLayeredPane lframe;
     private JPanel gPanel;
-    private JPanel bPanel;
+    private JPanel iPanel;
     private String action = "login";
     private User user;
     private boolean failedLogin = false;
@@ -30,15 +25,15 @@ public class LoginDisplay {
         lframe.setBounds(0, 0, size.width, size.height);
 
         gPanel = new GridAreaPanel();
-        gPanel.setBackground(new Color(25, 100, 23));
+        gPanel.setBackground(new Color(150, 217, 136));
         gPanel.setBounds(0, 0, size.width, size.height);
         gPanel.setOpaque(true);
-        bPanel = addButtons();
-        bPanel.setBounds(0, 0, size.width, size.height);
-        bPanel.setOpaque(false);
+        iPanel = addUserInterface();
+        iPanel.setBounds(0, 0, size.width, size.height);
+        iPanel.setOpaque(false);
 
         lframe.add(gPanel, 0, 0);
-        lframe.add(bPanel, 1, 0);
+        lframe.add(iPanel, 1, 0);
 
         frame.add(lframe);
         frame.pack();
@@ -48,7 +43,7 @@ public class LoginDisplay {
         frame.setVisible(true);
     }
 
-    private JPanel addButtons() {
+    private JPanel addUserInterface() {
         JPanel buttonPanel = new JPanel();
         JButton switchButton;
 
@@ -79,7 +74,7 @@ public class LoginDisplay {
             switchButton.addActionListener(e -> {
                 action = "sign up";
                 failedLogin = false;
-                newBPanel();
+                newIPanel();
             });
 
             buttonPanel.add(loginButton);
@@ -133,7 +128,7 @@ public class LoginDisplay {
             switchButton.setBounds(size.width/2 - 75, 900, 150, 30);
             switchButton.addActionListener(e -> {
                 action = "login";
-                newBPanel();
+                newIPanel();
                 failedSignUp = false;
             });
 
@@ -168,12 +163,12 @@ public class LoginDisplay {
         }
     }
 
-    public void newBPanel() {
-        lframe.remove(bPanel);
-        bPanel = addButtons();
-        bPanel.setBounds(0, 0, size.width, size.height);
-        bPanel.setOpaque(false);
-        lframe.add(bPanel, 1, 0);
+    public void newIPanel() {
+        lframe.remove(iPanel);
+        iPanel = addUserInterface();
+        iPanel.setBounds(0, 0, size.width, size.height);
+        iPanel.setOpaque(false);
+        lframe.add(iPanel, 1, 0);
 //
     }
 
@@ -193,12 +188,11 @@ public class LoginDisplay {
     class GridAreaPanel extends JPanel {
 
         public void paintComponent(Graphics g) {
-
-
+            super.paintComponent(g);
             setDoubleBuffered(true);
 
             Graphics2D g2d = (Graphics2D) g;
-            g2d.setBackground(Color.white);
+
 
             if (failedLogin) {
                 g2d.setColor(Color.red);

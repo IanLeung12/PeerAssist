@@ -2,8 +2,7 @@ import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.event.FocusEvent;
 import java.awt.event.FocusListener;
-
-import javax.swing.*;
+import javax.swing.JTextField;
 
 public class CustomPasswordField extends JTextField {
 

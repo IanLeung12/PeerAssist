@@ -1,4 +1,3 @@
-import org.apache.pdfbox.*;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.rendering.PDFRenderer;
 
@@ -12,6 +11,7 @@ import java.io.IOException;
 import javax.imageio.ImageIO;
 import javax.swing.*;
 import java.awt.*;
+import java.util.ArrayList;
 
 public class MainDisplay {
 
@@ -21,9 +21,12 @@ public class MainDisplay {
     private JPanel bPanel = new JPanel();
     private PDDocument pdf;
     private PDFRenderer pdfRenderer;
+    private User user;
     Dimension size = Toolkit.getDefaultToolkit().getScreenSize();
 
-    public MainDisplay() {
+    public MainDisplay(User user) {
+        this.user = user;
+
         this.frame = new JFrame("Main GUI");
         lframe = new JLayeredPane();
         lframe.setBounds(0, 0, size.width, size.height);
@@ -38,7 +41,7 @@ public class MainDisplay {
 
 
         gPanel = new GridAreaPanel();
-        gPanel.setBackground(new Color(25, 100, 23));
+        gPanel.setBackground(new Color(150, 217, 136));
         gPanel.setBounds(0, 0, size.width, size.height);
         gPanel.setOpaque(true);
         //bPanel = addButtons();
@@ -94,11 +97,13 @@ public class MainDisplay {
     class GridAreaPanel extends JPanel {
 
         public void paintComponent(Graphics g) {
+            super.paintComponent(g);
 
             Graphics2D g2d = (Graphics2D) g;
             setDoubleBuffered(true);
 
-            g2d.setBackground(Color.white);
+
+
 
             if (pdfRenderer != null) {
                 BufferedImage image = null;
@@ -141,7 +146,10 @@ public class MainDisplay {
     }
 
     public static void main(String[] args) {
-        MainDisplay md = new MainDisplay();
+        ArrayList<Document> documents = new ArrayList<>();
+        documents.add(new Document("Pictures/Proposal.pdf", 100, 11));
+        documents.add(new Document("Pictures/Mario Essay.pdf", 100, 7));
+        MainDisplay md = new MainDisplay(null);
         while (true) {
             md.refresh();
             try {
