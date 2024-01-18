@@ -1,3 +1,7 @@
+import org.apache.pdfbox.*;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.rendering.PDFRenderer;
+
 import java.awt.Graphics;
 import java.awt.font.FontRenderContext;
 import java.awt.font.TextLayout;
@@ -9,29 +13,40 @@ import javax.imageio.ImageIO;
 import javax.swing.*;
 import java.awt.*;
 
-public class Display {
+public class MainDisplay {
 
     private JFrame frame;
     private JLayeredPane lframe;
     private JPanel gPanel = new JPanel();
     private JPanel bPanel = new JPanel();
+    private PDDocument pdf;
+    private PDFRenderer pdfRenderer;
     Dimension size = Toolkit.getDefaultToolkit().getScreenSize();
 
-    public Display() {
-        this.frame = new JFrame("Login");
+    public MainDisplay() {
+        this.frame = new JFrame("Main GUI");
         lframe = new JLayeredPane();
         lframe.setBounds(0, 0, size.width, size.height);
+
+        try {
+            pdf = PDDocument.load(new File("Pictures/Proposal.pdf"));
+            pdfRenderer = new PDFRenderer(pdf);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+
 
         gPanel = new GridAreaPanel();
         gPanel.setBackground(new Color(25, 100, 23));
         gPanel.setBounds(0, 0, size.width, size.height);
         gPanel.setOpaque(true);
-        bPanel = addButtons();
-        bPanel.setBounds(0, 0, size.width, size.height);
-        bPanel.setOpaque(false);
+        //bPanel = addButtons();
+       // bPanel.setBounds(0, 0, size.width, size.height);
+        //bPanel.setOpaque(false);
 
         lframe.add(gPanel, 0, 0);
-        lframe.add(bPanel, 1, 0);
+        //lframe.add(bPanel, 1, 0);
 
         frame.add(lframe);
         frame.pack();
@@ -80,11 +95,22 @@ public class Display {
 
         public void paintComponent(Graphics g) {
 
-
+            Graphics2D g2d = (Graphics2D) g;
             setDoubleBuffered(true);
 
-            Graphics2D g2d = (Graphics2D) g;
             g2d.setBackground(Color.white);
+
+            if (pdfRenderer != null) {
+                BufferedImage image = null;
+                try {
+                    image = pdfRenderer.renderImage(1);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                g2d.drawImage(image, 0, 0, null);
+            }
+
+
         }
     }
 
@@ -111,6 +137,18 @@ public class Display {
             g2d.setTransform(originalTransform);
             g2d.setStroke(originalStroke);
             g2d.setColor(originalColor);
+        }
+    }
+
+    public static void main(String[] args) {
+        MainDisplay md = new MainDisplay();
+        while (true) {
+            md.refresh();
+            try {
+                Thread.sleep(5);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
         }
     }
 }

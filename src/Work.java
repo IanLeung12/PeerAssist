@@ -17,16 +17,17 @@ public class Work extends PDDocument {
 
 
     Work(String pathname, double maxMark, double avgMark, int gradeLevel, ArrayList<String> topics, ArrayList<Review> reviews) {
-        try {
-            this.document = PDDocument.load(new File(java.lang.String.valueOf(pathname)));
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+//        try {
+//            this.document = PDDocument.load(new File(java.lang.String.valueOf(pathname)));
+//        } catch (IOException e) {
+//            throw new RuntimeException(e);
+//        }
         this.maxMark = maxMark;
         this.avgMark = avgMark;
         this.gradeLevel = gradeLevel;
         this.topics = topics;
         this.reviews = reviews;
+
     }
 
     public static void main(String[] args) {

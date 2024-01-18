@@ -1,4 +1,6 @@
 import java.awt.Graphics;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.awt.font.FontRenderContext;
 import java.awt.font.TextLayout;
 import java.awt.geom.AffineTransform;
@@ -8,6 +10,7 @@ import java.io.IOException;
 import javax.imageio.ImageIO;
 import javax.swing.*;
 import java.awt.*;
+import java.util.ArrayList;
 
 public class LoginDisplay {
 
@@ -15,13 +18,14 @@ public class LoginDisplay {
     private JLayeredPane lframe;
     private JPanel gPanel;
     private JPanel bPanel;
-    private boolean inLogin = true;
+    private String action = "login";
     private User user;
-    private boolean unsuccessful = false;
+    private boolean failedLogin = false;
+    private boolean failedSignUp = false;
     Dimension size = Toolkit.getDefaultToolkit().getScreenSize();
 
     public LoginDisplay() {
-        this.frame = new JFrame("Game");
+        this.frame = new JFrame("Login");
         lframe = new JLayeredPane();
         lframe.setBounds(0, 0, size.width, size.height);
 
@@ -46,48 +50,110 @@ public class LoginDisplay {
 
     private JPanel addButtons() {
         JPanel buttonPanel = new JPanel();
+        JButton switchButton;
 
         CustomTextField usernameField = new CustomTextField("Enter Username");
         CustomPasswordField passwordField = new CustomPasswordField("Enter Password");
-        buttonPanel.add(usernameField);
-        buttonPanel.add(passwordField);
-        usernameField.setBounds((size.getSize().width/2 - 300), 300, 600, 50);
-        passwordField.setBounds((size.getSize().width/2 - 300), 400, 600, 50);
+        usernameField.setBounds((size.width/2 - 300), 100, 600, 50);
+        passwordField.setBounds((size.width/2 - 300), 200, 600, 50);
         usernameField.setFont(new Font("Helvetica", Font.PLAIN, 24));
         passwordField.setFont(new Font("Helvetica", Font.PLAIN, 24));
+        buttonPanel.add(usernameField);
+        buttonPanel.add(passwordField);
 
-        if (inLogin) {
+        if (action.equals("login")) {
             JButton loginButton = new JButton("Login");
-            loginButton.setBounds(size.getSize().width/2 - 100, 500, 200, 50);
+            loginButton.setBounds(size.width/2 - 100, 300, 200, 50);
             loginButton.addActionListener(e -> {
                 String username = usernameField.getText();
                 String password = (passwordField.getText());
                 if (username.equals("ianleung") && (password.equals("abcdef123"))) {
                     this.user = new User(1, "Ian Leung", 11, "ian@gmail.com", "abcdef123", null);
                 } else {
-                    unsuccessful = true;
+                    failedLogin = true;
                 }
-                refresh();
+            });
+
+            switchButton = new JButton("Create an account");
+            switchButton.setBounds(size.width/2 - 75, 900, 150, 30);
+            switchButton.addActionListener(e -> {
+                action = "sign up";
+                failedLogin = false;
+                newBPanel();
+            });
+
+            buttonPanel.add(loginButton);
+            buttonPanel.add(switchButton);
+
+        } else if (action.equals("sign up")) {
+            CustomTextField emailField = new CustomTextField("Enter Email");
+            emailField.setBounds((size.width/2 - 300), 300, 600, 50);
+            emailField.setFont(new Font("Helvetica", Font.PLAIN, 24));
+
+
+            Integer[] grades = new Integer[]{1,2,3,4,5,6,7,8,9,10,11,12};
+            JComboBox<Integer> gradeChooser = new JComboBox<>(grades);
+            gradeChooser.setSelectedIndex(0);
+            gradeChooser.setBounds(size.width/2 + 120,400, 60, 40);
+
+            JToggleButton[] subjectButtons = new JToggleButton[11];
+            String[] subjectArr = new String[]{"Math", "English", "Physics", "Chemistry", "Biology", "Art", "Music",
+                    "Computer Science", "Business", "French", "Social Studies"};
+            for (int i = 0; i < 11; i ++) {
+                subjectButtons[i] = new JToggleButton(subjectArr[i]);
+                System.out.println();
+                subjectButtons[i].setBounds(350 + (200 * i) - 1100 * (i/6), 550 + 100 *  (i/6), 150, 50);
+                buttonPanel.add(subjectButtons[i]);
+            }
+
+
+            JButton signUpButton = new JButton("Create Account");
+            signUpButton.setBounds(size.width/2 - 100, 800, 200, 50);
+            signUpButton.addActionListener(e -> {
+                String username = usernameField.getText();
+                String password = passwordField.getText();
+                String email = emailField.getText();
+                int grade = (int) gradeChooser.getSelectedItem();
+                ArrayList<String> subjects = new ArrayList<>();
+                for (int i = 0; i < 11; i ++) {
+                    if (subjectButtons[i].isSelected()) {
+                        subjects.add(subjectArr[i]);
+                    }
+                }
+                if ((fieldIsValid(username)) && (fieldIsValid(password)) && (fieldIsValid(email))) {
+                    this.user = new User(1, username, grade, email, password, subjects);
+                } else {
+                    failedSignUp = true;
+                }
+
 
             });
 
-            JButton signUpButton = new JButton("Create an account");
-            signUpButton.setBounds(size.getSize().width/2 - 100, 600, 200, 50);
-            signUpButton.addActionListener(e -> { inLogin = false; });
+            switchButton = new JButton("Login instead");
+            switchButton.setBounds(size.width/2 - 75, 900, 150, 30);
+            switchButton.addActionListener(e -> {
+                action = "login";
+                newBPanel();
+                failedSignUp = false;
+            });
 
-            buttonPanel.add(loginButton);
+            buttonPanel.add(emailField);
+            buttonPanel.add(gradeChooser);
             buttonPanel.add(signUpButton);
-        } else {
-            CustomTextField emailField = new CustomTextField("Enter Email");
-            emailField.add(usernameField);
-            emailField.setBounds((size.getSize().width/2 - 300), 300, 600, 50);
-            emailField.setFont(new Font("Helvetica", Font.PLAIN, 24));
+            buttonPanel.add(switchButton);
         }
 
         buttonPanel.setLayout(null);
+
         return buttonPanel;
     }
 
+    private boolean fieldIsValid(String str) {
+        if ((str == null) || (str.contains(" "))) {
+            return false;
+        }
+        return true;
+    }
     /**
      * Image
      * Loads an image
@@ -100,6 +166,15 @@ public class LoginDisplay {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    public void newBPanel() {
+        lframe.remove(bPanel);
+        bPanel = addButtons();
+        bPanel.setBounds(0, 0, size.width, size.height);
+        bPanel.setOpaque(false);
+        lframe.add(bPanel, 1, 0);
+//
     }
 
     public void refresh() {
@@ -125,47 +200,24 @@ public class LoginDisplay {
             Graphics2D g2d = (Graphics2D) g;
             g2d.setBackground(Color.white);
 
-            if (unsuccessful) {
+            if (failedLogin) {
                 g2d.setColor(Color.red);
-                drawCenteredString("Login failed. Try again or sign up to make a new account", 0, 575, size.width, 16, g2d);
+                g2d.setFont(new Font("Helvetica", Font.PLAIN, 14));
+                g2d.drawString("Login failed. Try again or sign up to make a new account", size.width/ 2 - 175, 390);
+            }
+
+            if (failedSignUp) {
+                g2d.setColor(Color.red);
+                g2d.setFont(new Font("Helvetica", Font.PLAIN, 14));
+                g2d.drawString("Sign Up failed. Make sure your username, pasword, and email are valid", size.width/ 2 - 210, 875);
+            }
+
+            if (action.equals("sign up")) {
+                g2d.setColor(Color.BLACK);
+                g2d.setFont(new Font("Helvetica", Font.PLAIN, 24));
+                g2d.drawString("Enter Current Grade: ", size.width/2 - 140, 430);
+                g2d.drawString("Select Favourite Subjects: ", size.width/2 - 160, 500);
             }
         }
-    }
-
-    private void drawBorderedString(String str, int x, int y, float size, float stroke, Graphics2D g2d) {
-        AffineTransform originalTransform = g2d.getTransform();
-        Stroke originalStroke = g2d.getStroke();
-        Color originalColor = g2d.getColor();
-
-        try {
-            g2d.translate(x, y);
-
-            g2d.setColor(Color.black);
-            FontRenderContext frc = g2d.getFontRenderContext();
-            TextLayout tl = new TextLayout(str, g2d.getFont().deriveFont(size), frc);
-            Shape shape = tl.getOutline(null);
-
-            g2d.setStroke(new BasicStroke(stroke));
-            g2d.draw(shape);
-
-            g2d.setColor(Color.white);
-            g2d.fill(shape);
-        } finally {
-            // Restore the ginal state
-            g2d.setTransform(originalTransform);
-            g2d.setStroke(originalStroke);
-            g2d.setColor(originalColor);
-        }
-    }
-
-    private void drawCenteredString(String str, int x, int y, int width, float size,  Graphics2D g2d) {
-        FontRenderContext frc = g2d.getFontRenderContext();
-        TextLayout tl = new TextLayout(str, g2d.getFont().deriveFont(size), frc);
-
-        // Calculate the x-coordinate to center the text
-        int textX = x + width/ 2 - 150;
-
-        // Calculate the y-coordinate to center the text
-        g2d.drawString(str, textX, y);
     }
 }
