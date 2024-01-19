@@ -82,10 +82,6 @@ public class Document extends PDDocument {
         this.name = name;
     }
 
-    @Override
-    public PDDocument getDocument() {
-        return document;
-    }
 
     public double getAvgMark() {
         return avgMark;

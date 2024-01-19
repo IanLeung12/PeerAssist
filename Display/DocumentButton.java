@@ -1,5 +1,6 @@
 import javax.swing.*;
 import java.awt.*;
+import java.awt.Graphics;
 import java.awt.geom.RoundRectangle2D;
 
 public class DocumentButton extends JButton {
@@ -8,9 +9,11 @@ public class DocumentButton extends JButton {
     private static final int ARC_HEIGHT = 15;
 
     public DocumentButton(Document document) {
-        super("");
+        super(document.getName());
         setContentAreaFilled(false); // Make the button transparent
-        setFocusPainted(false); // Remove the focus rectangle around the text
+        setFocusPainted(false); // Remove the focus rectangle around the tex
+        setBackground(new Color(71, 173, 39, 207));
+        setForeground(new Color(240, 240, 248));
     }
 
     @Override
@@ -34,4 +37,5 @@ public class DocumentButton extends JButton {
 
         super.paintComponent(g);
     }
+
 }

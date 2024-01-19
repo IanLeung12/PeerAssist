@@ -19,20 +19,22 @@ public class MainDisplay {
     private JLayeredPane lframe;
     private JPanel gPanel = new JPanel();
     private JPanel bPanel = new JPanel();
+    ArrayList<Document> documents;
     private PDDocument pdf;
     private PDFRenderer pdfRenderer;
     private User user;
     Dimension size = Toolkit.getDefaultToolkit().getScreenSize();
 
-    public MainDisplay(User user) {
+    public MainDisplay(User user, ArrayList<Document> documents) {
         this.user = user;
+        this.documents = documents;
 
         this.frame = new JFrame("Main GUI");
         lframe = new JLayeredPane();
         lframe.setBounds(0, 0, size.width, size.height);
 
         try {
-            pdf = PDDocument.load(new File("Pictures/Proposal.pdf"));
+            pdf = PDDocument.load(new File("Pictures/Mario Essay.pdf"));
             pdfRenderer = new PDFRenderer(pdf);
         } catch (Exception e) {
             e.printStackTrace();
@@ -44,12 +46,13 @@ public class MainDisplay {
         gPanel.setBackground(new Color(150, 217, 136));
         gPanel.setBounds(0, 0, size.width, size.height);
         gPanel.setOpaque(true);
-        //bPanel = addButtons();
-       // bPanel.setBounds(0, 0, size.width, size.height);
-        //bPanel.setOpaque(false);
+        bPanel = addButtons();
+        bPanel.setBounds(0, 0, size.width, size.height);
+        bPanel.setOpaque(false);
 
+        lframe.add(bPanel);
         lframe.add(gPanel, 0, 0);
-        //lframe.add(bPanel, 1, 0);
+        lframe.add(bPanel, 1, 0);
 
         frame.add(lframe);
         frame.pack();
@@ -61,6 +64,13 @@ public class MainDisplay {
 
     private JPanel addButtons() {
         JPanel buttonPanel = new JPanel();
+        ArrayList<DocumentButton> documentList = new ArrayList<>();
+        for (int i = 0; i < documents.size(); i ++) {
+            documentList.add(new DocumentButton(documents.get(i)));
+            documentList.get(i).setBounds(100, 200 + 250 * i, 600, 200);
+            documentList.get(i).setFont(new Font("Helvetica", Font.BOLD, 48));
+            buttonPanel.add(documentList.get(i));
+        }
         JButton button = new JButton("Example");
 
         button.setBounds(0, 0, 100, 50);
@@ -108,7 +118,7 @@ public class MainDisplay {
             if (pdfRenderer != null) {
                 BufferedImage image = null;
                 try {
-                    image = pdfRenderer.renderImage(1);
+                    image = pdfRenderer.renderImage(0);
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -149,7 +159,7 @@ public class MainDisplay {
         ArrayList<Document> documents = new ArrayList<>();
         documents.add(new Document("Pictures/Proposal.pdf", 100, 11));
         documents.add(new Document("Pictures/Mario Essay.pdf", 100, 7));
-        MainDisplay md = new MainDisplay(null);
+        MainDisplay md = new MainDisplay(null, documents);
         while (true) {
             md.refresh();
             try {
