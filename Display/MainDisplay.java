@@ -19,6 +19,7 @@ public class MainDisplay {
     private JLayeredPane lframe;
     private JPanel gPanel = new JPanel();
     private JPanel bPanel = new JPanel();
+    JScrollPane scrollPane;
     ArrayList<Document> documents;
     private PDDocument pdf;
     private PDFRenderer pdfRenderer;
@@ -46,13 +47,14 @@ public class MainDisplay {
         gPanel.setBackground(new Color(150, 217, 136));
         gPanel.setBounds(0, 0, size.width, size.height);
         gPanel.setOpaque(true);
-        bPanel = addButtons();
-        bPanel.setBounds(0, 0, size.width, size.height);
-        bPanel.setOpaque(false);
+        bPanel = DocumentPanel();
+        scrollPane = new JScrollPane(bPanel);
+        scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
+        scrollPane.setBounds(50, 100, 750, 800);
 
-        lframe.add(bPanel);
         lframe.add(gPanel, 0, 0);
-        lframe.add(bPanel, 1, 0);
+        lframe.add(scrollPane, 1, 0);
 
         frame.add(lframe);
         frame.pack();
@@ -62,13 +64,15 @@ public class MainDisplay {
         frame.setVisible(true);
     }
 
-    private JPanel addButtons() {
+    private JPanel DocumentPanel() {
         JPanel buttonPanel = new JPanel();
+        buttonPanel.setBounds(0,0, size.width, size.height);
+        buttonPanel.setBackground(new Color(150, 217, 136));
+        buttonPanel.setOpaque(true);
         ArrayList<DocumentButton> documentList = new ArrayList<>();
         for (int i = 0; i < documents.size(); i ++) {
             documentList.add(new DocumentButton(documents.get(i)));
-            documentList.get(i).setBounds(100, 200 + 250 * i, 600, 200);
-            documentList.get(i).setFont(new Font("Helvetica", Font.BOLD, 48));
+            documentList.get(i).setBounds(100, 50 + 250 * i, 600, 200);
             buttonPanel.add(documentList.get(i));
         }
         JButton button = new JButton("Example");
@@ -82,6 +86,7 @@ public class MainDisplay {
         });
 
         buttonPanel.add(button);
+        buttonPanel.setPreferredSize(new Dimension(600, 300 + 250 * documents.size()));
         buttonPanel.setLayout(null);
         return buttonPanel;
     }
@@ -122,7 +127,7 @@ public class MainDisplay {
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
-                g2d.drawImage(image, 0, 0, null);
+                g2d.drawImage(image, 900, 100, null);
             }
 
 
@@ -157,8 +162,10 @@ public class MainDisplay {
 
     public static void main(String[] args) {
         ArrayList<Document> documents = new ArrayList<>();
-        documents.add(new Document("Pictures/Proposal.pdf", 100, 11));
+        documents.add(new Document("Pictures/Proposal.pdf", 100, 12));
         documents.add(new Document("Pictures/Mario Essay.pdf", 100, 7));
+        documents.add(new Document("Pictures/DECA PSE Presentation.pdf", 100, 11));
+        documents.add(new Document("Pictures/R Presentation.pdf", 100, 12));
         MainDisplay md = new MainDisplay(null, documents);
         while (true) {
             md.refresh();
