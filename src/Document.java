@@ -62,8 +62,12 @@ public class Document extends PDDocument {
             throw new RuntimeException(e);
         }
         this.maxMark = maxMark;
+        this.avgMark = Math.random() * 100.0;
         this.gradeLevel = gradeLevel;
         this.topics = new ArrayList<>();
+        for (int i = 1; i < Math.random() * 7; i ++) {
+            topics.add(DisplayConst.subjectArr[(int) (Math.random() * 11)]);
+        }
         this.reviews = new ArrayList<>();
     }
 
@@ -127,17 +131,24 @@ public class Document extends PDDocument {
         this.reviews = reviews;
     }
 
+    public static class NameComparator implements Comparator<Document> {
+        @Override
+        public int compare(Document o1, Document o2) {
+            return o1.getName().compareTo(o2.getName());
+        }
+    }
+
     public static class MarkComparator implements Comparator<Document> {
         @Override
         public int compare(Document o1, Document o2) {
-            return (int) (o1.avgMark - o2.avgMark);
+            return (int) (o2.avgMark - o1.avgMark);
         }
     }
 
     public static class GradeComparator implements Comparator<Document> {
         @Override
         public int compare(Document o1, Document o2) {
-            return (int) (o1.gradeLevel - o2.gradeLevel);
+            return (int) (o2.gradeLevel - o1.gradeLevel);
         }
     }
 

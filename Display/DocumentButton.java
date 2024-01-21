@@ -4,6 +4,7 @@ import java.awt.Graphics;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.geom.RoundRectangle2D;
+import java.awt.image.BufferedImage;
 
 public class DocumentButton extends JButton {
 
@@ -14,8 +15,10 @@ public class DocumentButton extends JButton {
     public DocumentButton(Document document) {
         super("");
         this.document = document;
+        BufferedImage profile = DisplayConst.profile;
         setContentAreaFilled(false); // Make the button transparent
         setFocusPainted(false); // Remove the focus rectangle around the tex
+        setBorderPainted(false);
         setBackground(new Color(71, 173, 39, 207));
         setForeground(new Color(240, 240, 248));
         addMouseListener(new MouseAdapter() {
@@ -63,7 +66,35 @@ public class DocumentButton extends JButton {
 
         g2.drawString(document.getName(), 20, 50);
 
+        g2.drawImage(DisplayConst.profile, 20, 65, 30, 30, null);
+        g2.setFont(new Font("Helvetica", Font.PLAIN, 24));
+        g2.drawString("Bobby", 60 , 90);
+        g2.drawString("Grade: " + document.getGradeLevel(), 20, 130);
+        g2.drawString(document.getReviews().size() + " Reviews", 20, this.getHeight() - 20);
 
+        double average = document.getAvgMark()/document.getMaxMark();
+        g2.setColor(new Color((int) (255 - average*255), 15, (int) (average * 255)));
+        g2.setFont(new Font("Helvetica", Font.BOLD, 52));
+        g2.drawString(Math.round(average*1000.0)/10.0 + "%", this.getWidth() - 165, this.getHeight() - 20);
+
+        int topics = 0;
+
+        g2.setFont(new Font("Helvetica", Font.PLAIN, 18));
+        for (String topic: document.getTopics()) {
+            g2.setColor(new Color(47, 114, 27, 207));
+            g2.fillRoundRect(155 + 205 * topics - 410 * (topics/2), 60 + 40 * (topics/2),
+                    190, 30, 10, 15);
+            g2.setColor(Color.white);
+            if (topics < 3) {
+                g2.drawString(topic, 160 + 205 * topics - 410 * (topics/2),  80 + 40 * (topics/2));
+            } else {
+                g2.drawString("More...", 160 + 205 * topics - 410 * (topics/2),  80 + 40 * (topics/2));
+                break;
+            }
+            topics ++;
+
+
+        }
 
         g2.dispose();
 
