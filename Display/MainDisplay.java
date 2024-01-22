@@ -20,41 +20,35 @@ public class MainDisplay {
     private JPanel gPanel = new JPanel();
     private JPanel bPanel = new JPanel();
     ArrayList<Document> documents;
-    private PDDocument pdf;
-    private PDFRenderer pdfRenderer;
     private User user;
-    Dimension size = Toolkit.getDefaultToolkit().getScreenSize();
 
     public MainDisplay(User user, ArrayList<Document> documents) {
         this.user = user;
         this.documents = documents;
 
-        this.frame = new JFrame("Main GUI");
+        this.frame = new JFrame("PeerAssist");
         lframe = new JLayeredPane();
-        lframe.setBounds(0, 0, size.width, size.height);
-
-        try {
-            pdf = PDDocument.load(new File("Pictures/Mario Essay.pdf"));
-            pdfRenderer = new PDFRenderer(pdf);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
 
 
         HomePanel homePanel = new HomePanel(documents);
-        homePanel.setBackground(new Color(150, 217, 136));
-        homePanel.setBounds(0, 0, size.width, size.height);
-        homePanel.setOpaque(true);
+        DocumentPanel reviewPanel = new DocumentPanel(user, documents.get(3));
 
+        lframe.add(reviewPanel, 1);
 
-        lframe.add(homePanel, 0, 0);
+        DrawPanel drawPanel = new DrawPanel();
+        drawPanel.setSize(DisplayConst.size);
+        drawPanel.setBackground(new Color(0,0,0,0));
+        drawPanel.setVisible(true);
+
+        lframe.add(drawPanel, 0);
 
 
         frame.add(lframe);
         frame.pack();
 
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setSize(size);
+        frame.setExtendedState(JFrame.MAXIMIZED_BOTH);
+        frame.setSize(DisplayConst.size);
         frame.setVisible(true);
     }
 
@@ -64,7 +58,7 @@ public class MainDisplay {
 
 
 
-    class GridAreaPanel extends JPanel {
+    private class DrawPanel extends JPanel {
 
         public void paintComponent(Graphics g) {
             super.paintComponent(g);
@@ -73,17 +67,7 @@ public class MainDisplay {
             setDoubleBuffered(true);
 
 
-
-
-            if (pdfRenderer != null) {
-                BufferedImage image = null;
-                try {
-                    image = pdfRenderer.renderImage(0);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-                g2d.drawImage(image, 900, 100, null);
-            }
+            g2d.drawImage(DisplayConst.profile, DisplayConst.size.width - 100, 20, 80, 80, null);
 
 
         }

@@ -17,19 +17,18 @@ public class LoginDisplay {
     private User user;
     private boolean failedLogin = false;
     private boolean failedSignUp = false;
-    Dimension size = Toolkit.getDefaultToolkit().getScreenSize();
 
     public LoginDisplay() {
         this.frame = new JFrame("Login");
         lframe = new JLayeredPane();
-        lframe.setBounds(0, 0, size.width, size.height);
+        lframe.setSize(DisplayConst.size);
 
         gPanel = new GridAreaPanel();
         gPanel.setBackground(new Color(150, 217, 136));
-        gPanel.setBounds(0, 0, size.width, size.height);
+        gPanel.setSize(DisplayConst.size);
         gPanel.setOpaque(true);
         iPanel = addUserInterface();
-        iPanel.setBounds(0, 0, size.width, size.height);
+        iPanel.setSize(DisplayConst.size);
         iPanel.setOpaque(false);
 
         lframe.add(gPanel, 0, 0);
@@ -38,8 +37,9 @@ public class LoginDisplay {
         frame.add(lframe);
         frame.pack();
 
+        frame.setExtendedState(JFrame.MAXIMIZED_BOTH);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setSize(size);
+        frame.setSize(DisplayConst.size);
         frame.setVisible(true);
     }
 
@@ -49,8 +49,8 @@ public class LoginDisplay {
 
         CustomTextField usernameField = new CustomTextField("Enter Username");
         CustomPasswordField passwordField = new CustomPasswordField("Enter Password");
-        usernameField.setBounds((size.width/2 - 300), 100, 600, 50);
-        passwordField.setBounds((size.width/2 - 300), 200, 600, 50);
+        usernameField.setBounds((DisplayConst.size.width/2 - 300), 100, 600, 50);
+        passwordField.setBounds((DisplayConst.size.width/2 - 300), 200, 600, 50);
         usernameField.setFont(new Font("Helvetica", Font.PLAIN, 24));
         passwordField.setFont(new Font("Helvetica", Font.PLAIN, 24));
         buttonPanel.add(usernameField);
@@ -58,7 +58,7 @@ public class LoginDisplay {
 
         if (action.equals("login")) {
             JButton loginButton = new JButton("Login");
-            loginButton.setBounds(size.width/2 - 100, 300, 200, 50);
+            loginButton.setBounds(DisplayConst.size.width/2 - 100, 300, 200, 50);
             loginButton.addActionListener(e -> {
                 String username = usernameField.getText();
                 String password = (passwordField.getText());
@@ -70,7 +70,7 @@ public class LoginDisplay {
             });
 
             switchButton = new JButton("Create an account");
-            switchButton.setBounds(size.width/2 - 75, 900, 150, 30);
+            switchButton.setBounds(DisplayConst.size.width/2 - 75, 900, 150, 30);
             switchButton.addActionListener(e -> {
                 action = "sign up";
                 failedLogin = false;
@@ -82,14 +82,14 @@ public class LoginDisplay {
 
         } else if (action.equals("sign up")) {
             CustomTextField emailField = new CustomTextField("Enter Email");
-            emailField.setBounds((size.width/2 - 300), 300, 600, 50);
+            emailField.setBounds((DisplayConst.size.width/2 - 300), 300, 600, 50);
             emailField.setFont(new Font("Helvetica", Font.PLAIN, 24));
 
 
             Integer[] grades = new Integer[]{1,2,3,4,5,6,7,8,9,10,11,12};
             JComboBox<Integer> gradeChooser = new JComboBox<>(grades);
             gradeChooser.setSelectedIndex(0);
-            gradeChooser.setBounds(size.width/2 + 120,400, 60, 40);
+            gradeChooser.setBounds(DisplayConst.size.width/2 + 120,400, 60, 40);
 
             JToggleButton[] subjectButtons = new JToggleButton[11];
             String[] subjectArr = new String[]{"Math", "English", "Physics", "Chemistry", "Biology", "Art", "Music",
@@ -103,7 +103,7 @@ public class LoginDisplay {
 
 
             JButton signUpButton = new JButton("Create Account");
-            signUpButton.setBounds(size.width/2 - 100, 800, 200, 50);
+            signUpButton.setBounds(DisplayConst.size.width/2 - 100, 800, 200, 50);
             signUpButton.addActionListener(e -> {
                 String username = usernameField.getText();
                 String password = passwordField.getText();
@@ -125,7 +125,7 @@ public class LoginDisplay {
             });
 
             switchButton = new JButton("Login instead");
-            switchButton.setBounds(size.width/2 - 75, 900, 150, 30);
+            switchButton.setBounds(DisplayConst.size.width/2 - 75, 900, 150, 30);
             switchButton.addActionListener(e -> {
                 action = "login";
                 newIPanel();
@@ -166,7 +166,7 @@ public class LoginDisplay {
     public void newIPanel() {
         lframe.remove(iPanel);
         iPanel = addUserInterface();
-        iPanel.setBounds(0, 0, size.width, size.height);
+        iPanel.setSize(DisplayConst.size);
         iPanel.setOpaque(false);
         lframe.add(iPanel, 1, 0);
 //
@@ -197,20 +197,20 @@ public class LoginDisplay {
             if (failedLogin) {
                 g2d.setColor(Color.red);
                 g2d.setFont(new Font("Helvetica", Font.PLAIN, 14));
-                g2d.drawString("Login failed. Try again or sign up to make a new account", size.width/ 2 - 175, 390);
+                g2d.drawString("Login failed. Try again or sign up to make a new account", DisplayConst.size.width/ 2 - 175, 390);
             }
 
             if (failedSignUp) {
                 g2d.setColor(Color.red);
                 g2d.setFont(new Font("Helvetica", Font.PLAIN, 14));
-                g2d.drawString("Sign Up failed. Make sure your username, pasword, and email are valid", size.width/ 2 - 210, 875);
+                g2d.drawString("Sign Up failed. Make sure your username, pasword, and email are valid", DisplayConst.size.width/ 2 - 210, 875);
             }
 
             if (action.equals("sign up")) {
                 g2d.setColor(Color.BLACK);
                 g2d.setFont(new Font("Helvetica", Font.PLAIN, 24));
-                g2d.drawString("Enter Current Grade: ", size.width/2 - 140, 430);
-                g2d.drawString("Select Favourite Subjects: ", size.width/2 - 160, 500);
+                g2d.drawString("Enter Current Grade: ", DisplayConst.size.width/2 - 140, 430);
+                g2d.drawString("Select Favourite Subjects: ", DisplayConst.size.width/2 - 160, 500);
             }
         }
     }

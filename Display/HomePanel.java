@@ -1,5 +1,3 @@
-import org.bouncycastle.util.Arrays;
-
 import javax.swing.*;
 import java.awt.*;
 import java.util.ArrayList;
@@ -7,10 +5,9 @@ import java.util.Collections;
 
 public class HomePanel extends JLayeredPane {
 
-    ArrayList<Document> documents;
-    ArrayList<Document> documentsCopy;
-    JScrollPane scrollPane;
-    Dimension size = Toolkit.getDefaultToolkit().getScreenSize();
+    private ArrayList<Document> documents;
+    private ArrayList<Document> documentsCopy;
+    private JScrollPane scrollPane;
 
     HomePanel(ArrayList<Document> documents) {
         this.documents = documents;
@@ -18,15 +15,20 @@ public class HomePanel extends JLayeredPane {
         documentsCopy = new ArrayList<>();
         documentsCopy.addAll(documents);
 
+
         JPanel documentPanel = newDocumentPanel();
         scrollPane = new JScrollPane(documentPanel);
         scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
-        scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
+        scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
         scrollPane.getVerticalScrollBar().setUnitIncrement(16);
         scrollPane.setBounds(50, 150, 900, 800);
 
         add(scrollPane,0);
         add(newButtonPanel(),1);
+
+        setBackground(new Color(150, 217, 136));
+        setSize(DisplayConst.size);
+        setVisible(true);
 
     }
 
@@ -42,14 +44,14 @@ public class HomePanel extends JLayeredPane {
             documentPanel.add(documentList.get(i));
         }
 
-        documentPanel.setPreferredSize(new Dimension(600, 300 + 250 * documents.size()));
+        documentPanel.setPreferredSize(new Dimension(600, 100 + 250 * documentsCopy.size()));
         documentPanel.setLayout(null);
         return documentPanel;
     }
 
     private JPanel newButtonPanel() {
         JPanel buttonPanel = new JPanel();
-        buttonPanel.setBounds(0,0, size.width, size.height);
+        buttonPanel.setBounds(0,0, DisplayConst.size.width, DisplayConst.size.height);
         buttonPanel.setBackground(new Color(150, 217, 136));
         buttonPanel.setOpaque(true);
         buttonPanel.setBorder(null);

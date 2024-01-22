@@ -6,7 +6,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Scanner;
 
-public class Document extends PDDocument {
+public class Document{
     private String name;
     private PDDocument document;
     private double maxMark;
@@ -65,7 +65,7 @@ public class Document extends PDDocument {
         this.avgMark = Math.random() * 100.0;
         this.gradeLevel = gradeLevel;
         this.topics = new ArrayList<>();
-        for (int i = 1; i < Math.random() * 7; i ++) {
+        for (int i = 0; i < 11; i ++) {
             topics.add(DisplayConst.subjectArr[(int) (Math.random() * 11)]);
         }
         this.reviews = new ArrayList<>();
@@ -76,6 +76,14 @@ public class Document extends PDDocument {
 
 
 
+    }
+
+    public void addReview(Review review) {
+        avgMark = (avgMark * reviews.size() + review.getMark())/(reviews.size() + 1);
+        reviews.add(review);
+    }
+    public PDDocument getDocument() {
+        return document;
     }
 
     public String getName() {
