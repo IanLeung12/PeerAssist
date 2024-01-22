@@ -53,7 +53,6 @@ public class Document{
     }
 
     Document(String pathname, double maxMark, int gradeLevel) {
-
         try {
             File file = new File(pathname);
             this.name = file.getName();
@@ -62,20 +61,13 @@ public class Document{
             throw new RuntimeException(e);
         }
         this.maxMark = maxMark;
-        this.avgMark = Math.random() * 100.0;
+        this.avgMark = 0;
         this.gradeLevel = gradeLevel;
         this.topics = new ArrayList<>();
         for (int i = 0; i < 11; i ++) {
             topics.add(DisplayConst.subjectArr[(int) (Math.random() * 11)]);
         }
         this.reviews = new ArrayList<>();
-    }
-
-    public static void main(String[] args) {
-        Scanner input = new Scanner(System.in);
-
-
-
     }
 
     public void addReview(Review review) {

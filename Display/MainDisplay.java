@@ -1,14 +1,4 @@
-import org.apache.pdfbox.pdmodel.PDDocument;
-import org.apache.pdfbox.rendering.PDFRenderer;
-
 import java.awt.Graphics;
-import java.awt.font.FontRenderContext;
-import java.awt.font.TextLayout;
-import java.awt.geom.AffineTransform;
-import java.awt.image.BufferedImage;
-import java.io.File;
-import java.io.IOException;
-import javax.imageio.ImageIO;
 import javax.swing.*;
 import java.awt.*;
 import java.util.ArrayList;
@@ -17,8 +7,9 @@ public class MainDisplay {
 
     private JFrame frame;
     private JLayeredPane lframe;
-    private JPanel gPanel = new JPanel();
-    private JPanel bPanel = new JPanel();
+    private HomePanel homePanel;
+    private DocumentPanel documentPanel;
+    private JButton backButton;
     ArrayList<Document> documents;
     private User user;
 
@@ -30,10 +21,9 @@ public class MainDisplay {
         lframe = new JLayeredPane();
 
 
-        HomePanel homePanel = new HomePanel(documents);
-        DocumentPanel reviewPanel = new DocumentPanel(user, documents.get(3));
+        homePanel = new HomePanel(documents, this);
 
-        lframe.add(reviewPanel, 1);
+        lframe.add(homePanel, 1);
 
         DrawPanel drawPanel = new DrawPanel();
         drawPanel.setSize(DisplayConst.size);
@@ -41,6 +31,7 @@ public class MainDisplay {
         drawPanel.setVisible(true);
 
         lframe.add(drawPanel, 0);
+        lframe.setLayout(null);
 
 
         frame.add(lframe);
@@ -52,13 +43,39 @@ public class MainDisplay {
         frame.setVisible(true);
     }
 
-    public void refresh() {
+    public void refresh()    {
         SwingUtilities.invokeLater(() ->frame.repaint());
     }
 
+    public void setToDocumentPanel(Document document) {
+        homePanel.setVisible(false);
+        documentPanel = new DocumentPanel(user, document);
+        backButton.setVisible(true);
+        lframe.add(documentPanel, 1);
+    }
 
+    public void backToHome() {
+        homePanel.setVisible(true);
+        lframe.remove(documentPanel);
+        backButton.setVisible(false);
+    }
 
     private class DrawPanel extends JPanel {
+
+        DrawPanel() {
+            backButton = new JButton("< Back");
+            backButton.setBackground(new Color(59, 138, 51, 216));
+            backButton.setBorderPainted(false);
+            backButton.setBounds(50, 20, 250, 60);
+            backButton.setForeground(Color.WHITE);
+            backButton.setFont(new Font("Helvetica", Font.BOLD, 48));
+            backButton.addActionListener(e -> {
+                backToHome();
+            });
+            backButton.setVisible(false);
+            add(backButton);
+            setLayout(null);
+        }
 
         public void paintComponent(Graphics g) {
             super.paintComponent(g);

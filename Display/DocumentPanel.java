@@ -59,6 +59,7 @@ public class DocumentPanel extends JLayeredPane {
             setBackground(new Color(150, 217, 136));
             setSize(DisplayConst.size);
             setVisible(true);
+
         }
 
         public void paintComponent(Graphics g) {
@@ -66,7 +67,7 @@ public class DocumentPanel extends JLayeredPane {
             Graphics2D g2d = (Graphics2D) g;
             setDoubleBuffered(true);
 
-            g2d.drawImage(DisplayConst.logo, 50, 0, null);
+            g2d.drawImage(DisplayConst.logo, 920, 0, null);
 
             g.setColor(Color.black);
             g.setFont(new Font("Helvetica", Font.BOLD, 52));
@@ -129,7 +130,7 @@ public class DocumentPanel extends JLayeredPane {
 
             for (int i = 0; i < pages; i ++) {
 
-                g2d.drawImage(pdfPages[i], 500 - pdfPages[i].getWidth()/2, i * (50 + pdfPages[i].getHeight()),null);
+                g2d.drawImage(pdfPages[i], 500 - pdfPages[i].getWidth()/2, 40 + i * (50 + pdfPages[i].getHeight()),null);
             }
 
 
@@ -167,7 +168,7 @@ public class DocumentPanel extends JLayeredPane {
             cancelButton.setVisible(false);
 
             JButton postButton = new JButton("Post Review");
-            postButton.setBounds(400, 100, 150, 30);
+            postButton.setBounds(430, 100, 150, 30);
             postButton.setBackground(new Color(74, 159, 21, 178));
             postButton.setBorderPainted(false);
             postButton.setVisible(false);
@@ -198,7 +199,7 @@ public class DocumentPanel extends JLayeredPane {
 
                 double mark = 0;
                 try {
-                    Double.parseDouble(markField.getText());
+                    mark = Double.parseDouble(markField.getText());
                     if (mark > document.getMaxMark()) {
                         mark = document.getMaxMark();
                     } else if (mark < 0) {
@@ -215,7 +216,7 @@ public class DocumentPanel extends JLayeredPane {
                 postButton.setVisible(false);
 
                 Review newReview = new Review(user, mark, comment);
-                document.getReviews().add(newReview);
+                document.addReview(newReview);
                 commentBox commentBox = new commentBox(newReview);
                 commentBox.setBounds(20, 150 + currentY[0], 565, commentBox.getHeight() + 5);
                 currentY[0] += commentBox.getHeight() + 20;
@@ -227,7 +228,7 @@ public class DocumentPanel extends JLayeredPane {
 
             for (Review review: document.getReviews()) {
                 commentBox commentBox = new commentBox(review);
-                commentBox.setBounds(20, 50 + currentY[0], 565, commentBox.getHeight() + 5);
+                commentBox.setBounds(20, 150 + currentY[0], 565, commentBox.getHeight() + 5);
                 currentY[0] += commentBox.getHeight() + 20;
                 commentBoxes.add(commentBox);
                 add(commentBox);
@@ -285,7 +286,7 @@ public class DocumentPanel extends JLayeredPane {
                 StringBuilder currentLine = new StringBuilder();
 
                 for (String word : words) {
-                    if (currentLine.length() + word.length() <= 45) {
+                    if (currentLine.length() + word.length() <= 50) {
                         currentLine.append(word).append(" ");
                     } else {
                         lines.add(currentLine.toString().trim());
@@ -315,9 +316,7 @@ public class DocumentPanel extends JLayeredPane {
 
                 g2d.drawImage(DisplayConst.profile, 10, 10, 30, 30, null);
                 g2d.setFont(new Font("Helvetica", Font.PLAIN, 24));
-                g2d.drawString("Bobby", 50 , 30);
-
-
+                g2d.drawString("Bobby", 50 , 35);
 
                 g2d.setFont(new Font("Helvetica", Font.PLAIN, 18));
                 for (int i = 0; i < lines.size(); i ++) {

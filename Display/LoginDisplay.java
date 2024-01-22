@@ -92,10 +92,8 @@ public class LoginDisplay {
             gradeChooser.setBounds(DisplayConst.size.width/2 + 120,400, 60, 40);
 
             JToggleButton[] subjectButtons = new JToggleButton[11];
-            String[] subjectArr = new String[]{"Math", "English", "Physics", "Chemistry", "Biology", "Art", "Music",
-                    "Computer Science", "Business", "French", "Social Studies"};
             for (int i = 0; i < 11; i ++) {
-                subjectButtons[i] = new JToggleButton(subjectArr[i]);
+                subjectButtons[i] = new JToggleButton(DisplayConst.subjectArr[i]);
                 System.out.println();
                 subjectButtons[i].setBounds(350 + (200 * i) - 1100 * (i/6), 550 + 100 *  (i/6), 150, 50);
                 buttonPanel.add(subjectButtons[i]);
@@ -112,7 +110,7 @@ public class LoginDisplay {
                 ArrayList<String> subjects = new ArrayList<>();
                 for (int i = 0; i < 11; i ++) {
                     if (subjectButtons[i].isSelected()) {
-                        subjects.add(subjectArr[i]);
+                        subjects.add(DisplayConst.subjectArr[i]);
                     }
                 }
                 if ((fieldIsValid(username)) && (fieldIsValid(password)) && (fieldIsValid(email))) {

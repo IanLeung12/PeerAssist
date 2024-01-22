@@ -101,4 +101,7 @@ public class DocumentButton extends JButton {
         super.paintComponent(g);
     }
 
+    public Document getDocument() {
+        return document;
+    }
 }
