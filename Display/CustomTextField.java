@@ -15,7 +15,7 @@ public class CustomTextField extends JTextField {
 
         // Set initial text
         setForeground(Color.BLACK);
-        setText(backgroundText);
+        setText("");
 
 
         // Add focus listener to handle background text behavior

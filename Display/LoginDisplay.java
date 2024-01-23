@@ -94,7 +94,6 @@ public class LoginDisplay {
             JToggleButton[] subjectButtons = new JToggleButton[11];
             for (int i = 0; i < 11; i ++) {
                 subjectButtons[i] = new JToggleButton(DisplayConst.subjectArr[i]);
-                System.out.println();
                 subjectButtons[i].setBounds(350 + (200 * i) - 1100 * (i/6), 550 + 100 *  (i/6), 150, 50);
                 buttonPanel.add(subjectButtons[i]);
             }
@@ -191,6 +190,9 @@ public class LoginDisplay {
 
             Graphics2D g2d = (Graphics2D) g;
 
+            g2d.drawImage(DisplayConst.logo, 890, 0, null);
+            g.setColor(Color.black);
+            g.drawString("Release 1.0.0", 30, DisplayConst.size.height - 100);
 
             if (failedLogin) {
                 g2d.setColor(Color.red);

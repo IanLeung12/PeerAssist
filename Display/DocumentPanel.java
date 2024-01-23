@@ -67,7 +67,7 @@ public class DocumentPanel extends JLayeredPane {
             Graphics2D g2d = (Graphics2D) g;
             setDoubleBuffered(true);
 
-            g2d.drawImage(DisplayConst.logo, 920, 0, null);
+            g2d.drawImage(DisplayConst.logo, 890, 0, null);
 
             g.setColor(Color.black);
             g.setFont(new Font("Helvetica", Font.BOLD, 52));
@@ -197,16 +197,16 @@ public class DocumentPanel extends JLayeredPane {
                 commentField.setText("");
                 commentField.setVisible(false);
 
-                double mark = 0;
-                try {
+                double mark;
+                if (markField.getText().isEmpty()) {
+                    mark = 0;
+                } else {
                     mark = Double.parseDouble(markField.getText());
                     if (mark > document.getMaxMark()) {
                         mark = document.getMaxMark();
                     } else if (mark < 0) {
                         mark = 0;
                     }
-                } catch (Exception ex) {
-                    ex.printStackTrace();
                 }
 
                 markField.setText("");
@@ -316,7 +316,7 @@ public class DocumentPanel extends JLayeredPane {
 
                 g2d.drawImage(DisplayConst.profile, 10, 10, 30, 30, null);
                 g2d.setFont(new Font("Helvetica", Font.PLAIN, 24));
-                g2d.drawString("Bobby", 50 , 35);
+                g2d.drawString(review.getUser().getName(), 50 , 35);
 
                 g2d.setFont(new Font("Helvetica", Font.PLAIN, 18));
                 for (int i = 0; i < lines.size(); i ++) {

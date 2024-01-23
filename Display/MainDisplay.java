@@ -83,10 +83,18 @@ public class MainDisplay {
             Graphics2D g2d = (Graphics2D) g;
             setDoubleBuffered(true);
 
-
             g2d.drawImage(DisplayConst.profile, DisplayConst.size.width - 100, 20, 80, 80, null);
+            g.setColor(Color.black);
+            g.setFont(new Font("Helvetica", Font.PLAIN, 36));
+            drawRightAlignedString(g, user.getName(), DisplayConst.size.width - 120,  70);
 
+        }
 
+        private void drawRightAlignedString(Graphics g, String text, int x, int y) {
+            FontMetrics fontMetrics = g.getFontMetrics();
+            int textWidth = fontMetrics.stringWidth(text);
+            int xCoordinate = x - textWidth;
+            g.drawString(text, xCoordinate, y);
         }
     }
 
@@ -96,7 +104,7 @@ public class MainDisplay {
         documents.add(new Document("Pictures/Mario Essay.pdf", 100, 7));
         documents.add(new Document("Pictures/DECA PSE Presentation.pdf", 100, 11));
         documents.add(new Document("Pictures/R Presentation.pdf", 100, 12));
-        MainDisplay md = new MainDisplay(null, documents);
+        MainDisplay md = new MainDisplay(new User(1, "Ian Leung", 11, "ian@gmail.com", "abcdef123", null), documents);
         while (true) {
             md.refresh();
             try {

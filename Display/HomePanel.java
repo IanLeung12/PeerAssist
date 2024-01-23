@@ -98,16 +98,7 @@ public class HomePanel extends JLayeredPane {
             sortSelector.setFont(new Font("Helvetica", Font.PLAIN, 20));
             sortSelector.setSelectedIndex(0);
             sortSelector.addActionListener(e -> {
-                String sort = sortSelector.getSelectedItem().toString();
-                if (sort.equals("Alphabetical")) {
-                    documentsCopy.sort(new Document.NameComparator());
-                } else if (sort.equals("Average Mark")) {
-                    documentsCopy.sort(new Document.MarkComparator());
-                } else if (sort.equals("Grade Level")) {
-                    documentsCopy.sort(new Document.GradeComparator());
-                } else if (sort.equals("Review Amount")) {
-                    documentsCopy.sort(new Document.ReviewComparator());
-                }
+                sort(sortSelector.getSelectedItem().toString());
                 scrollPane.setViewportView(newDocumentPanel());
             });
 
@@ -132,11 +123,9 @@ public class HomePanel extends JLayeredPane {
                     fileName = selectedFile.getName();
                     path = selectedFile.getAbsolutePath();
                     String fileType = fileName.substring(fileName.lastIndexOf(".") + 1).toLowerCase();
-                    System.out.println(fileType);
                     if (!fileType.equals("pdf")) {
                         fileName = "Invalid. File must be a pdf.";
                     }
-                    System.out.println("Selected File: " + fileName);
                 }
             });
 
@@ -152,15 +141,13 @@ public class HomePanel extends JLayeredPane {
             JToggleButton[] subjectButtons = new JToggleButton[11];
             for (int i = 0; i < 11; i ++) {
                 subjectButtons[i] = new JToggleButton(DisplayConst.subjectArr[i]);
-                System.out.println();
                 subjectButtons[i].setBounds(1150 + (200 * i) - 600 * (i/3), 520 + 60 *  (i/3), 150, 40);
                 add(subjectButtons[i]);
             }
 
             JButton publishButton = new JButton("Publish Document");
-            publishButton.setBounds(1275, 800, 300, 50);
+            publishButton.setBounds(1225, 800, 400, 50);
             publishButton.setFont(new Font("Helvetica", Font.BOLD, 32));
-            publishButton.setBorderPainted(false);
 
             publishButton.addActionListener(e -> {
                 if ((fileName.equals("Invalid. File must be a pdf.")) || (fileName.equals("No file selected."))) {
@@ -176,6 +163,14 @@ public class HomePanel extends JLayeredPane {
                     }
                     documents.add(new Document(path, Double.parseDouble(markField.getText()),
                             grades[gradeChooser.getSelectedIndex()], topics));
+                    documentsCopy = search(documents, searchBar.getText().equals("Search") ? "" : searchBar.getText());
+                    System.out.println(searchBar.getText());
+                    sort(sortSelector.getSelectedItem().toString());
+                    scrollPane.setViewportView(newDocumentPanel());
+                    publishText = "Your file has been successfully uploaded.";
+                    fileName = "No file selected.";
+                    gradeChooser.setSelectedIndex(0);
+                    markField.setText("");
                 }
             });
 
@@ -183,6 +178,7 @@ public class HomePanel extends JLayeredPane {
             add(markField);
             add(chooseButton);
             add(reverseButton);
+            add(publishButton);
             add(searchBar);
             add(sortLabel);
             add(sortSelector);
@@ -235,20 +231,34 @@ public class HomePanel extends JLayeredPane {
             if (fileName.equals("Invalid. File must be a pdf.")) {
                 g.setColor(Color.red);
             }
+            g.drawString(fileName, 1320, 285);
 
             g.setColor(Color.black);
-            g.drawString(fileName, 1320, 285);
             g.drawString("Grade Level:", 1150, 350);
             g.drawString("Maximum Mark:", 1150, 425);
             g.drawString("Topics:", 1375, 500);
 
-
+            if (!publishText.equals("Your file has been successfully uploaded.")) {
+                g.setColor(Color.red);
+            }
+            g.drawString(publishText, 1200, 900);
 
 
 
         }
     }
 
+    private void sort(String sortType) {
+        if (sortType.equals("Alphabetical")) {
+            documentsCopy.sort(new Document.NameComparator());
+        } else if (sortType.equals("Average Mark")) {
+            documentsCopy.sort(new Document.MarkComparator());
+        } else if (sortType.equals("Grade Level")) {
+            documentsCopy.sort(new Document.GradeComparator());
+        } else if (sortType.equals("Review Amount")) {
+            documentsCopy.sort(new Document.ReviewComparator());
+        }
+    }
     private ArrayList<Document> search(ArrayList<Document> documents, String value) {
         ArrayList<Document> newDocuments = new ArrayList<>();
         for (Document document: documents) {
