@@ -1,4 +1,5 @@
 Platform to peer edit and review other student's assignments and other work. Final project for ICS4UE.
+
 Requires Apache PDFBox
 
 Home Page
@@ -6,3 +7,6 @@ Home Page
 
 Document Viewer
 ![image](https://github.com/user-attachments/assets/4f9ce503-0a89-4463-8561-938ef4825d4d)
+
+Video Demonstration:
+https://drive.google.com/file/d/145AGMovcY1yWezIWyJIA8QHlMM_jHFKF/view?usp=sharing 
