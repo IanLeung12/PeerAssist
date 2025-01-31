@@ -1,4 +1,4 @@
-Platform to peer edit and review other student's assignments and other work. Final project for ICS4UE
+Platform to peer edit and review other student's assignments and other work. Final project for ICS4UE.
 Requires Apache PDFBox
 
 Home Page
