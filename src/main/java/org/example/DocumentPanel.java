@@ -23,6 +23,7 @@ public class DocumentPanel extends JLayeredPane {
     private Document document;
     private PDDocument pdf;
     private User user;
+    private MongoDB db;
     int pageNum;
     int pages;
 
@@ -33,7 +34,8 @@ public class DocumentPanel extends JLayeredPane {
      * @param user The user associated with the document
      * @param document The document to be displayed
      */
-    DocumentPanel(User user, Document document) {
+    DocumentPanel(User user, Document document, MongoDB db) {
+        this.db = db;
         this.document = document;
         this.user = user;
         this.pageNum = 0;
@@ -254,6 +256,7 @@ public class DocumentPanel extends JLayeredPane {
 
                 Review newReview = new Review(user, mark, comment);
                 document.addReview(newReview);
+                db.addReview(document, newReview);
                 commentBox commentBox = new commentBox(newReview);
                 commentBox.setBounds(20, 150 + currentY[0], 565, commentBox.getHeight() + 5);
                 currentY[0] += commentBox.getHeight() + 20;

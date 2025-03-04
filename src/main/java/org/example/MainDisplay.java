@@ -25,6 +25,7 @@ public class MainDisplay {
     ArrayList<Document> documents;
     ArrayList<User> users;
     private User user;
+    private MongoDB db;
 
     /**
      * Constructor for MainDisplay.
@@ -33,16 +34,16 @@ public class MainDisplay {
      * @param documents The list of documents available on the platform.
      * @param users     The list of users registered on the platform.
      */
-    public MainDisplay(User user, ArrayList<Document> documents, ArrayList<User> users) {
+    public MainDisplay(User user, ArrayList<Document> documents, ArrayList<User> users, MongoDB db) {
         this.user = user;
         this.documents = documents;
         this.users = users;
-
+        this.db = db;
         this.frame = new JFrame("PeerAssist");
         lframe = new JLayeredPane();
 
 
-        homePanel = new HomePanel(documents, this,  user);
+        homePanel = new HomePanel(documents, this,  user, db);
 
         lframe.add(homePanel, 1);
 
@@ -53,7 +54,7 @@ public class MainDisplay {
         frame.addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosing(WindowEvent e) {
-                save();
+                db.close();
                 super.windowClosing(e);
             }
         });
@@ -81,7 +82,7 @@ public class MainDisplay {
      */
     public void setToDocumentPanel(Document document) {
         homePanel.setVisible(false);
-        documentPanel = new DocumentPanel(user, document);
+        documentPanel = new DocumentPanel(user, document, db);
         backButton.setVisible(true);
         lframe.add(documentPanel, 1);
     }
@@ -94,32 +95,6 @@ public class MainDisplay {
         lframe.remove(documentPanel);
         backButton.setVisible(false);
         homePanel.getDocumentsCopy().addAll(documents);
-    }
-
-
-    /**
-     * Saves user and document data to files.
-     */
-    public void save() {
-        try {
-            PrintWriter output = new PrintWriter(new File("Saves/users.txt"));
-            for (User user: users) {
-                output.println(user);
-            }
-            output.close();
-            output = new PrintWriter(new File("Saves/documents.txt"));
-            for (Document document: documents) {
-                output.println(document);
-                for (Review review: document.getReviews()) { // Reviews are put under documents in a save file
-                    output.println(review);
-                }
-                output.println("end");
-            }
-            output.close();
-        } catch (FileNotFoundException e) {
-            throw new RuntimeException(e);
-        }
-
     }
 
     private class DrawPanel extends JPanel {

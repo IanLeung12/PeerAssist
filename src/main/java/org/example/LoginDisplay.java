@@ -26,15 +26,17 @@ public class LoginDisplay {
     private boolean failedSignUp = false;
     private boolean newUser = false;
     private ArrayList<User> users;
+    private MongoDB db;
 
     /**
      * Constructor for LoginDisplay.
      *
      * @param users The list of users registered on the platform.
      */
-    public LoginDisplay(ArrayList<User> users) {
+    public LoginDisplay(ArrayList<User> users, MongoDB db) {
         this.users = users;
         this.frame = new JFrame("Login");
+        this.db = db;
         lframe = new JLayeredPane();
         lframe.setSize(DisplayConst.size);
 
@@ -141,6 +143,7 @@ public class LoginDisplay {
                 }
                 if ((fieldIsValid(username)) && (fieldIsValid(password)) && (fieldIsValid(email))) {
                     this.user = new User(users.size(), username, grade, email, password, subjects);
+                    db.saveUser(user);
                     newUser = true;
                 } else {
                     failedSignUp = true;

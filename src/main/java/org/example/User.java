@@ -42,6 +42,7 @@ public class User {
     @Override
     public String toString() {
         String str = ID + "," + name + "," + gradeLevel + "," + email + "," + password + ",";
+
         for (String subject: subjects) {
             str = str + subject + " ";
         }
@@ -88,5 +89,9 @@ public class User {
      */
     public String getPassword() {
         return password;
+    }
+
+    public ArrayList<String> getSubjects() {
+        return subjects;
     }
 }

@@ -9,6 +9,7 @@ import com.sun.xml.internal.messaging.saaj.util.ByteOutputStream;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
@@ -38,6 +39,7 @@ public class Document{
      * @param topics The topics associated with the document
      */
     Document(int ID, User user, String pathname, double maxMark, int gradeLevel, ArrayList<String> topics) {
+        this.ID = ID;
         this.user = user;
         this.pathname = pathname;
         try {
@@ -51,6 +53,22 @@ public class Document{
         this.gradeLevel = gradeLevel;
         this.topics = topics;
         this.reviews = new ArrayList<>();
+    }
+
+    Document(int ID, String name, User user, double maxMark, int gradeLevel, ArrayList<String> topics, byte[] content) {
+        this.ID = ID;
+        this.user = user;
+        this.name = name;
+        this.maxMark = maxMark;
+        this.gradeLevel = gradeLevel;
+        this.topics = topics;
+        this.reviews = new ArrayList<>();
+        try {
+            ByteArrayInputStream byteStream = new ByteArrayInputStream(content);
+            this.document = Loader.loadPDF(content);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     /**

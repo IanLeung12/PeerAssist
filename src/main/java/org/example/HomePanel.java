@@ -1,10 +1,11 @@
-package org.example; /**
+/**
  * [HomePanel.java]
  * Panel that displays all the different documents and allows users to upload their own
  * @author Ian Leung
  * @version 1.0 January 22, 2024
  */
 
+package org.example;
 import javax.swing.*;
 import javax.swing.text.AbstractDocument;
 import javax.swing.text.AttributeSet;
@@ -23,6 +24,7 @@ public class HomePanel extends JLayeredPane {
     private JScrollPane scrollPane;
     private MainDisplay mainDisplay;
     private User user;
+    private MongoDB db;
 
     /**
      * Constructor for HomePanel.
@@ -31,10 +33,11 @@ public class HomePanel extends JLayeredPane {
      * @param mainDisplay  The main display object.
      * @param user         The current user.
      */
-    HomePanel(ArrayList<Document> documents, MainDisplay mainDisplay, User user) {
+    HomePanel(ArrayList<Document> documents, MainDisplay mainDisplay, User user, MongoDB db) {
         this.user = user;
         this.mainDisplay = mainDisplay;
         this.documents = documents;
+        this.db = db;
         documents.sort(new Document.NameComparator());
         documentsCopy = new ArrayList<>();
         documentsCopy.addAll(documents);
@@ -198,6 +201,7 @@ public class HomePanel extends JLayeredPane {
                     // Adds file and resets/changes everything else to follow
                     documents.add(new Document(documents.size(), user, path, Double.parseDouble(markField.getText()),
                             grades[gradeChooser.getSelectedIndex()], topics));
+                    db.saveDoc(documents.get(documents.size() - 1));
                     documentsCopy = search(documents, searchBar.getText().equals("Search") ? "" : searchBar.getText());
                     System.out.println(searchBar.getText());
                     sort(sortSelector.getSelectedItem().toString());
