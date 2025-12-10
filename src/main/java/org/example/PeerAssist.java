@@ -16,7 +16,7 @@ public class PeerAssist {
         ArrayList<Document> documents = new ArrayList<>();
 
 
-        MongoDB db = new MongoDB("mongodb+srv://ian:aX8DhB4dMUDJUWTP@cluster0.bzf9eoy.mongodb.net/", "PeerAssist");
+        MongoDB db = new MongoDB("enter api key here", "PeerAssist");
         users = db.loadUsers();
 
         // Login loop
@@ -44,4 +44,5 @@ public class PeerAssist {
             }
         }
     }
+
 }
