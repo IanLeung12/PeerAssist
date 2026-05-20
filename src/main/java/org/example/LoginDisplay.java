@@ -13,6 +13,7 @@ import javax.imageio.ImageIO;
 import javax.swing.*;
 import java.awt.*;
 import java.util.ArrayList;
+import org.mindrot.jbcrypt.BCrypt;
 
 public class LoginDisplay {
 
@@ -87,7 +88,7 @@ public class LoginDisplay {
 
                 // Login check
                 for (User user: users) {
-                    if ((username.equals(user.getName())) && (password.equals(user.getPassword()))) {
+                    if ((username.equals(user.getName())) && BCrypt.checkpw(password, user.getPassword())) {
                         this.user = user;
                     }
                 }
@@ -142,7 +143,8 @@ public class LoginDisplay {
                     }
                 }
                 if ((fieldIsValid(username)) && (fieldIsValid(password)) && (fieldIsValid(email))) {
-                    this.user = new User(users.size(), username, grade, email, password, subjects);
+                    String hashed = BCrypt.hashpw(password, BCrypt.gensalt());
+                    this.user = new User(users.size(), username, grade, email, hashed, subjects);
                     db.saveUser(user);
                     newUser = true;
                 } else {
