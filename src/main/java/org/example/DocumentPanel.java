@@ -23,7 +23,7 @@ public class DocumentPanel extends JLayeredPane {
     private Document document;
     private PDDocument pdf;
     private User user;
-    private MongoDB db;
+    private Database db;
     int pageNum;
     int pages;
 
@@ -34,7 +34,7 @@ public class DocumentPanel extends JLayeredPane {
      * @param user The user associated with the document
      * @param document The document to be displayed
      */
-    DocumentPanel(User user, Document document, MongoDB db) {
+    DocumentPanel(User user, Document document, Database db) {
         this.db = db;
         this.document = document;
         this.user = user;

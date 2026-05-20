@@ -25,7 +25,7 @@ public class MainDisplay {
     ArrayList<Document> documents;
     ArrayList<User> users;
     private User user;
-    private MongoDB db;
+    private Database db;
 
     /**
      * Constructor for MainDisplay.
@@ -34,7 +34,7 @@ public class MainDisplay {
      * @param documents The list of documents available on the platform.
      * @param users     The list of users registered on the platform.
      */
-    public MainDisplay(User user, ArrayList<Document> documents, ArrayList<User> users, MongoDB db) {
+    public MainDisplay(User user, ArrayList<Document> documents, ArrayList<User> users, Database db) {
         this.user = user;
         this.documents = documents;
         this.users = users;

@@ -6,8 +6,10 @@ package org.example; /**
  */
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Scanner;
+import java.util.Properties;
 
 
 public class PeerAssist {
@@ -16,7 +18,12 @@ public class PeerAssist {
         ArrayList<Document> documents = new ArrayList<>();
 
 
-        MongoDB db = new MongoDB("enter api key here", "PeerAssist");
+        String dbUrl = loadDbUrl();
+        if (dbUrl == null || dbUrl.isEmpty()) {
+            throw new RuntimeException("Database URL not set. Add db.url to db.properties " +
+                    "in the project root, or set the PEERASSIST_DB_URL environment variable.");
+        }
+        Database db = new Database(dbUrl);
         users = db.loadUsers();
 
         // Login loop
@@ -43,6 +50,30 @@ public class PeerAssist {
                 throw new RuntimeException(e);
             }
         }
+    }
+
+    /**
+     * loadDbUrl
+     * Reads the database URL from db.properties (project root), falling back to
+     * the PEERASSIST_DB_URL environment variable if the file is missing.
+     *
+     * @return The database URL, or null if not configured.
+     */
+    private static String loadDbUrl() {
+        File file = new File("db.properties");
+        if (file.exists()) {
+            Properties props = new Properties();
+            try (FileInputStream in = new FileInputStream(file)) {
+                props.load(in);
+                String url = props.getProperty("db.url");
+                if (url != null && !url.isEmpty()) {
+                    return url;
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        return System.getenv("PEERASSIST_DB_URL");
     }
 
 }

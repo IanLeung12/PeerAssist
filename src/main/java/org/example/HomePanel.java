@@ -24,7 +24,7 @@ public class HomePanel extends JLayeredPane {
     private JScrollPane scrollPane;
     private MainDisplay mainDisplay;
     private User user;
-    private MongoDB db;
+    private Database db;
 
     /**
      * Constructor for HomePanel.
@@ -33,7 +33,7 @@ public class HomePanel extends JLayeredPane {
      * @param mainDisplay  The main display object.
      * @param user         The current user.
      */
-    HomePanel(ArrayList<Document> documents, MainDisplay mainDisplay, User user, MongoDB db) {
+    HomePanel(ArrayList<Document> documents, MainDisplay mainDisplay, User user, Database db) {
         this.user = user;
         this.mainDisplay = mainDisplay;
         this.documents = documents;

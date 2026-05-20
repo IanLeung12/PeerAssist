@@ -26,14 +26,14 @@ public class LoginDisplay {
     private boolean failedSignUp = false;
     private boolean newUser = false;
     private ArrayList<User> users;
-    private MongoDB db;
+    private Database db;
 
     /**
      * Constructor for LoginDisplay.
      *
      * @param users The list of users registered on the platform.
      */
-    public LoginDisplay(ArrayList<User> users, MongoDB db) {
+    public LoginDisplay(ArrayList<User> users, Database db) {
         this.users = users;
         this.frame = new JFrame("Login");
         this.db = db;
