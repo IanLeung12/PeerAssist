@@ -7,9 +7,8 @@ package org.example; /**
 
 import com.formdev.flatlaf.FlatLaf;
 import com.formdev.flatlaf.FlatLightLaf;
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Properties;
 import javax.swing.UIManager;
@@ -26,31 +25,26 @@ public class PeerAssist {
         UIManager.put("ScrollBar.thumbArc", 999);
         UIManager.put("ScrollBar.width", 12);
 
-        ArrayList<User> users = new ArrayList<>();
-        ArrayList<Document> documents = new ArrayList<>();
-
-
-        String dbUrl = loadDbUrl();
-        if (dbUrl == null || dbUrl.isEmpty()) {
-            throw new RuntimeException("Database URL not set. Add db.url to db.properties " +
-                    "in the project root, or set the PEERASSIST_DB_URL environment variable.");
+        Properties config = loadConfig();
+        String url = config.getProperty("supabase.url");
+        String publishableKey = config.getProperty("supabase.publishableKey");
+        if (url == null || url.isEmpty() || publishableKey == null || publishableKey.isEmpty()) {
+            throw new RuntimeException("supabase.url and supabase.publishableKey must be set in supabase.properties");
         }
-        Database db = new Database(dbUrl);
-        users = db.loadUsers();
+        Database db = new Database(url, publishableKey);
 
         // Login loop
-        LoginDisplay login = new LoginDisplay(users, db);
+        LoginDisplay login = new LoginDisplay(db);
         while (login.getUser() == null) {
             login.refresh();
             Thread.sleep(5);
         }
         User user = login.getUser();
-        if (login.isNewUser()) {
-            users.add(user);
-        }
         login.dispose();
-        documents = db.loadDocs(users);
 
+        // Load data after authenticating (Row Level Security requires a session)
+        ArrayList<User> users = db.loadUsers();
+        ArrayList<Document> documents = db.loadDocs(users);
 
         // Main loop
         MainDisplay md = new MainDisplay(user, documents, users, db);
@@ -65,27 +59,23 @@ public class PeerAssist {
     }
 
     /**
-     * loadDbUrl
-     * Reads the database URL from db.properties (project root), falling back to
-     * the PEERASSIST_DB_URL environment variable if the file is missing.
+     * loadConfig
+     * Loads supabase.properties (Supabase URL + publishable key) from the classpath.
+     * The file is bundled inside the JAR, so downloaded copies need no setup.
      *
-     * @return The database URL, or null if not configured.
+     * @return The loaded properties.
      */
-    private static String loadDbUrl() {
-        File file = new File("db.properties");
-        if (file.exists()) {
-            Properties props = new Properties();
-            try (FileInputStream in = new FileInputStream(file)) {
-                props.load(in);
-                String url = props.getProperty("db.url");
-                if (url != null && !url.isEmpty()) {
-                    return url;
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
+    private static Properties loadConfig() {
+        Properties props = new Properties();
+        try (InputStream in = PeerAssist.class.getResourceAsStream("/supabase.properties")) {
+            if (in == null) {
+                throw new RuntimeException("supabase.properties not found on the classpath");
             }
+            props.load(in);
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to read supabase.properties", e);
         }
-        return System.getenv("PEERASSIST_DB_URL");
+        return props;
     }
 
 }

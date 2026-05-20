@@ -10,42 +10,103 @@ and ranked by average review score.
 ## Tech stack
 
 - **Java 8** + **Swing** (desktop GUI)
-- **PostgreSQL** (cloud, Supabase free tier) for persistence
+- **Supabase** — Auth (per-user accounts) + PostgREST data API, secured with
+  Row Level Security
 - **PDFBox** for rendering uploaded PDFs
-- **jBCrypt** for password hashing
+- **Gson** for JSON
 - **FlatLaf** for a modern look-and-feel
-- **Maven** build
+- **Maven** build (fat JAR via maven-shade-plugin)
 
-## Setup
+## Running the app (users)
 
-### 1. Database
-
-Create a free PostgreSQL database (e.g. [Supabase](https://supabase.com) or
-[Neon](https://neon.tech)). The app creates its tables (`users`, `documents`,
-`reviews`) automatically on first run.
-
-### 2. Connection config
-
-Copy `db.properties.example` to `db.properties` in the project root, then fill in
-your connection URL:
-
-```properties
-db.url=jdbc:postgresql://HOST:5432/postgres?user=USER&password=PASSWORD&sslmode=require
-```
-
-For Supabase: **Connect → JDBC tab → Session pooler** (port 5432).
-
-`db.properties` is gitignored — it holds your database password, never commit it.
-Alternatively, set the `PEERASSIST_DB_URL` environment variable instead of using
-the file.
-
-### 3. Run
-
-Build and run with Maven, or run `org.example.PeerAssist` from your IDE:
+Download `PeerAssist.jar` and run it — no setup, no config:
 
 ```sh
-mvn clean compile
+java -jar PeerAssist.jar
 ```
+
+Requires **Java 8 or newer** installed. Sign up with an email and password, then
+log in.
+
+## Building / hosting (developer)
+
+The app talks to one shared Supabase project. To set up your own:
+
+### 1. Supabase project
+
+Create a free project at [supabase.com](https://supabase.com).
+
+- **Auth → Sign In / Providers → Email**: turn **off** "Confirm email" (the
+  desktop app has no email-link handling).
+- **SQL Editor**: create the tables and Row Level Security policies:
+
+```sql
+create table profiles (
+  id uuid primary key references auth.users on delete cascade,
+  name text,
+  grade integer,
+  subjects text
+);
+
+create table documents (
+  doc_id integer generated always as identity primary key,
+  user_id uuid references profiles(id),
+  name text,
+  max_mark double precision,
+  grade_level integer,
+  subjects text,
+  content text
+);
+
+create table reviews (
+  review_id integer generated always as identity primary key,
+  doc_id integer references documents(doc_id),
+  reviewer uuid references profiles(id),
+  mark double precision,
+  comment text
+);
+
+alter table profiles  enable row level security;
+alter table documents enable row level security;
+alter table reviews   enable row level security;
+
+create policy "read profiles"  on profiles  for select to authenticated using (true);
+create policy "read documents" on documents for select to authenticated using (true);
+create policy "read reviews"   on reviews   for select to authenticated using (true);
+
+create policy "insert own profile"  on profiles  for insert to authenticated with check (auth.uid() = id);
+create policy "insert own document" on documents for insert to authenticated with check (auth.uid() = user_id);
+create policy "modify own document" on documents for update to authenticated using (auth.uid() = user_id);
+create policy "delete own document" on documents for delete to authenticated using (auth.uid() = user_id);
+create policy "insert own review"   on reviews   for insert to authenticated with check (auth.uid() = reviewer);
+create policy "modify own review"   on reviews   for update to authenticated using (auth.uid() = reviewer);
+create policy "delete own review"   on reviews   for delete to authenticated using (auth.uid() = reviewer);
+```
+
+- **Project Settings → API**: copy the **Project URL** and the **publishable**
+  key (`sb_publishable_...`).
+
+### 2. Config
+
+Put the URL and publishable key in `src/main/resources/supabase.properties`:
+
+```properties
+supabase.url=https://YOUR-PROJECT-REF.supabase.co
+supabase.publishableKey=YOUR-PUBLISHABLE-KEY
+```
+
+The publishable key is public by design — Row Level Security protects the data —
+so this file is bundled inside the JAR and safe to commit. Never use the secret
+key.
+
+### 3. Build
+
+```sh
+mvn clean package
+```
+
+Produces a single runnable `target/PeerAssist3-1.0-SNAPSHOT.jar` (rename to
+`PeerAssist.jar` for distribution).
 
 ## Screenshots
 

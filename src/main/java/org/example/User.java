@@ -7,7 +7,7 @@ package org.example; /**
 
 import java.util.ArrayList;
 public class User {
-    private int ID;
+    private String ID;
     private String name;
     private int gradeLevel;
     private String email;
@@ -24,7 +24,7 @@ public class User {
      * @param password   The password associated with the user's account.
      * @param subjects   The list of subjects that the user is interested in or associated with.
      */
-    public User(int ID, String name, int gradeLevel, String email,  String password, ArrayList<String> subjects) {
+    public User(String ID, String name, int gradeLevel, String email,  String password, ArrayList<String> subjects) {
         this.ID = ID;
         this.name = name;
         this.email = email;
@@ -55,11 +55,11 @@ public class User {
      *
      * @return The user's ID.
      */
-    public int getID() {
+    public String getID() {
         return ID;
     }
 
-    public void setID(int ID) {
+    public void setID(String ID) {
         this.ID = ID;
     }
 

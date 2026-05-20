@@ -13,7 +13,6 @@ import javax.imageio.ImageIO;
 import javax.swing.*;
 import java.awt.*;
 import java.util.ArrayList;
-import org.mindrot.jbcrypt.BCrypt;
 
 public class LoginDisplay {
 
@@ -25,17 +24,14 @@ public class LoginDisplay {
     private User user;
     private boolean failedLogin = false;
     private boolean failedSignUp = false;
-    private boolean newUser = false;
-    private ArrayList<User> users;
     private Database db;
 
     /**
      * Constructor for LoginDisplay.
      *
-     * @param users The list of users registered on the platform.
+     * @param db The Supabase database client.
      */
-    public LoginDisplay(ArrayList<User> users, Database db) {
-        this.users = users;
+    public LoginDisplay(Database db) {
         this.frame = new JFrame("Login");
         this.db = db;
         lframe = new JLayeredPane();
@@ -70,7 +66,8 @@ public class LoginDisplay {
         JPanel buttonPanel = new JPanel();
         JButton switchButton;
 
-        CustomTextField usernameField = new CustomTextField("Enter Username");
+        CustomTextField usernameField = new CustomTextField(
+                action.equals("login") ? "Enter Email" : "Enter Username");
         CustomPasswordField passwordField = new CustomPasswordField("Enter Password");
         usernameField.setBounds((DisplayConst.size.width/2 - 300), 100, 600, 50);
         passwordField.setBounds((DisplayConst.size.width/2 - 300), 200, 600, 50);
@@ -83,16 +80,13 @@ public class LoginDisplay {
             JButton loginButton = new JButton("Login");
             loginButton.setBounds(DisplayConst.size.width/2 - 100, 300, 200, 50);
             loginButton.addActionListener(e -> {
-                String username = usernameField.getText();
-                String password = (passwordField.getText());
+                String email = usernameField.getText();
+                String password = passwordField.getText();
 
-                // Login check
-                for (User user: users) {
-                    if ((username.equals(user.getName())) && BCrypt.checkpw(password, user.getPassword())) {
-                        this.user = user;
-                    }
-                }
-                if (user == null) {
+                User loggedIn = db.logIn(email, password);
+                if (loggedIn != null) {
+                    this.user = loggedIn;
+                } else {
                     failedLogin = true;
                 }
             });
@@ -142,14 +136,15 @@ public class LoginDisplay {
                         subjects.add(DisplayConst.subjectArr[i]);
                     }
                 }
-                if (!fieldIsValid(username) || !fieldIsValid(password) || !fieldIsValid(email)
-                        || usernameTaken(username)) {
+                if (!fieldIsValid(username) || !fieldIsValid(password) || !fieldIsValid(email)) {
                     failedSignUp = true;
                 } else {
-                    String hashed = BCrypt.hashpw(password, BCrypt.gensalt());
-                    this.user = new User(users.size(), username, grade, email, hashed, subjects);
-                    db.saveUser(user);
-                    newUser = true;
+                    User created = db.signUp(username, grade, email, password, subjects);
+                    if (created != null) {
+                        this.user = created;
+                    } else {
+                        failedSignUp = true;
+                    }
                 }
 
 
@@ -188,21 +183,6 @@ public class LoginDisplay {
     }
 
     /**
-     * Checks whether a username is already registered.
-     *
-     * @param username The username to check.
-     * @return True if the username is already taken, false otherwise.
-     */
-    private boolean usernameTaken(String username) {
-        for (User user : users) {
-            if (user.getName().equals(username)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    /**
      * Reloads the interface panel (for switching between login/signup)
      */
     public void newIPanel() {
@@ -233,15 +213,6 @@ public class LoginDisplay {
      */
     public User getUser() {
         return user;
-    }
-
-    /**
-     * Checks if the user is a new user.
-     *
-     * @return True if the user is a new user, false otherwise.
-     */
-    public boolean isNewUser() {
-        return newUser;
     }
 
     /*

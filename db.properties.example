@@ -1,6 +1,0 @@
-# PeerAssist database config.
-# Copy this file to db.properties (same folder) and fill in your Supabase URL.
-# db.properties is gitignored - never commit it, it holds your DB password.
-#
-# Supabase: Connect button -> JDBC tab -> Session pooler (port 5432).
-db.url=jdbc:postgresql://HOST.pooler.supabase.com:5432/postgres?user=postgres.PROJECTREF&password=YOURPASSWORD&sslmode=require

@@ -94,7 +94,6 @@ public class MainDisplay {
         homePanel.setVisible(true);
         lframe.remove(documentPanel);
         backButton.setVisible(false);
-        homePanel.getDocumentsCopy().addAll(documents);
     }
 
     private class DrawPanel extends JPanel {

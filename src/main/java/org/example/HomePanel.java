@@ -135,7 +135,8 @@ public class HomePanel extends JLayeredPane {
                 scrollPane.setViewportView(newDocumentPanel());
             });
 
-            JButton reverseButton = new JButton(new ImageIcon("Pictures/ReverseIcon.png"));
+            JButton reverseButton = new JButton(new ImageIcon(
+                    HomePanel.class.getResource("/images/ReverseIcon.png")));
             reverseButton.setBounds(900, 50, 50, 50);
             reverseButton.setBorderPainted(false);
             reverseButton.setBackground(new Color(150, 217, 136));
