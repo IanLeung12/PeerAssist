@@ -17,6 +17,7 @@ import java.util.ArrayList;
  */
 public class Database {
 
+    private final String jdbcUrl;
     private Connection connection;
 
     /**
@@ -26,20 +27,35 @@ public class Database {
      * @param jdbcUrl The Postgres JDBC connection URL.
      */
     public Database(String jdbcUrl) {
+        this.jdbcUrl = jdbcUrl;
+        conn();
+        createTables();
+    }
+
+    /**
+     * conn
+     * Returns a live database connection, reopening it if it has been closed
+     * or dropped (e.g. network blip or idle timeout on the cloud database).
+     *
+     * @return A valid Connection.
+     */
+    private Connection conn() {
         try {
-            this.connection = DriverManager.getConnection(jdbcUrl);
-            createTables();
+            if (connection == null || connection.isClosed() || !connection.isValid(3)) {
+                connection = DriverManager.getConnection(jdbcUrl);
+            }
         } catch (SQLException e) {
             throw new RuntimeException("Failed to connect to database", e);
         }
+        return connection;
     }
 
     /**
      * createTables
      * Creates the users, documents and reviews tables if they do not exist.
      */
-    private void createTables() throws SQLException {
-        try (Statement stmt = connection.createStatement()) {
+    private void createTables() {
+        try (Statement stmt = conn().createStatement()) {
             stmt.execute(
                     "CREATE TABLE IF NOT EXISTS users (" +
                     "user_id SERIAL PRIMARY KEY," +
@@ -64,6 +80,8 @@ public class Database {
                     "reviewer INTEGER," +
                     "mark DOUBLE PRECISION," +
                     "comment TEXT)");
+        } catch (SQLException e) {
+            throw new RuntimeException("Failed to create tables", e);
         }
     }
 
@@ -76,7 +94,7 @@ public class Database {
     public void saveUser(User user) {
         String sql = "INSERT INTO users (name, grade, email, password, subjects) " +
                 "VALUES (?, ?, ?, ?, ?) RETURNING user_id";
-        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
+        try (PreparedStatement stmt = conn().prepareStatement(sql)) {
             stmt.setString(1, user.getName());
             stmt.setInt(2, user.getGradeLevel());
             stmt.setString(3, user.getEmail());
@@ -110,7 +128,7 @@ public class Database {
 
         String sql = "INSERT INTO documents (user_id, name, max_mark, grade_level, subjects, content) " +
                 "VALUES (?, ?, ?, ?, ?, ?) RETURNING doc_id";
-        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
+        try (PreparedStatement stmt = conn().prepareStatement(sql)) {
             stmt.setInt(1, doc.getUser().getID());
             stmt.setString(2, doc.getName());
             stmt.setDouble(3, doc.getMaxMark());
@@ -136,7 +154,7 @@ public class Database {
      */
     public void addReview(org.example.Document document, Review review) {
         String sql = "INSERT INTO reviews (doc_id, reviewer, mark, comment) VALUES (?, ?, ?, ?)";
-        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
+        try (PreparedStatement stmt = conn().prepareStatement(sql)) {
             stmt.setInt(1, document.getID());
             stmt.setInt(2, review.getUser().getID());
             stmt.setDouble(3, review.getMark());
@@ -156,7 +174,7 @@ public class Database {
     public ArrayList<User> loadUsers() {
         ArrayList<User> users = new ArrayList<>();
         String sql = "SELECT * FROM users ORDER BY user_id";
-        try (Statement stmt = connection.createStatement();
+        try (Statement stmt = conn().createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
             while (rs.next()) {
                 ArrayList<String> subjects = new ArrayList<>();
@@ -189,7 +207,7 @@ public class Database {
     public ArrayList<org.example.Document> loadDocs(ArrayList<User> users) {
         ArrayList<org.example.Document> documents = new ArrayList<>();
         String sql = "SELECT * FROM documents ORDER BY doc_id";
-        try (Statement stmt = connection.createStatement();
+        try (Statement stmt = conn().createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
             while (rs.next()) {
                 ArrayList<String> topics = new ArrayList<>();
@@ -227,7 +245,7 @@ public class Database {
      */
     private void loadReviews(org.example.Document document, ArrayList<User> users) throws SQLException {
         String sql = "SELECT * FROM reviews WHERE doc_id = ? ORDER BY review_id";
-        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
+        try (PreparedStatement stmt = conn().prepareStatement(sql)) {
             stmt.setInt(1, document.getID());
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {

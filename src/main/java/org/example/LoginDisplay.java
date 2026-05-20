@@ -142,13 +142,14 @@ public class LoginDisplay {
                         subjects.add(DisplayConst.subjectArr[i]);
                     }
                 }
-                if ((fieldIsValid(username)) && (fieldIsValid(password)) && (fieldIsValid(email))) {
+                if (!fieldIsValid(username) || !fieldIsValid(password) || !fieldIsValid(email)
+                        || usernameTaken(username)) {
+                    failedSignUp = true;
+                } else {
                     String hashed = BCrypt.hashpw(password, BCrypt.gensalt());
                     this.user = new User(users.size(), username, grade, email, hashed, subjects);
                     db.saveUser(user);
                     newUser = true;
-                } else {
-                    failedSignUp = true;
                 }
 
 
@@ -184,6 +185,21 @@ public class LoginDisplay {
             return false;
         }
         return true;
+    }
+
+    /**
+     * Checks whether a username is already registered.
+     *
+     * @param username The username to check.
+     * @return True if the username is already taken, false otherwise.
+     */
+    private boolean usernameTaken(String username) {
+        for (User user : users) {
+            if (user.getName().equals(username)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -253,7 +269,7 @@ public class LoginDisplay {
             if (failedSignUp) {
                 g2d.setColor(Color.red);
                 g2d.setFont(new Font("Helvetica", Font.PLAIN, 14));
-                g2d.drawString("Sign Up failed. Make sure your username, pasword, and email are valid", DisplayConst.size.width/ 2 - 210, 875);
+                g2d.drawString("Sign Up failed. Username may be taken, or username/password/email is invalid", DisplayConst.size.width/ 2 - 210, 875);
             }
 
             if (action.equals("sign up")) {
