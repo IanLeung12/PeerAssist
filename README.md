@@ -19,7 +19,7 @@ and ranked by average review score.
 
 ## Running the app (users)
 
-Download `PeerAssist.jar` and run it — no setup, no config:
+Download `PeerAssist.jar` from [releases](https://github.com/toxicface/PeerAssist/releases) and run it — no setup, no config:
 
 ```sh
 java -jar PeerAssist.jar
