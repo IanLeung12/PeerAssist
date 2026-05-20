@@ -5,15 +5,27 @@ package org.example; /**
  * @version 1.0 January 22, 2024
  */
 
+import com.formdev.flatlaf.FlatLaf;
+import com.formdev.flatlaf.FlatLightLaf;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Properties;
+import javax.swing.UIManager;
 
 
 public class PeerAssist {
     public static void main(String[] args) throws InterruptedException {
+        // Modern look-and-feel. Must run before any Swing component is created.
+        FlatLaf.registerCustomDefaultsSource("themes"); // themes/FlatLaf.properties: refined green accent
+        FlatLightLaf.setup();
+        UIManager.put("Button.arc", 14);
+        UIManager.put("Component.arc", 12);
+        UIManager.put("TextComponent.arc", 10);
+        UIManager.put("ScrollBar.thumbArc", 999);
+        UIManager.put("ScrollBar.width", 12);
+
         ArrayList<User> users = new ArrayList<>();
         ArrayList<Document> documents = new ArrayList<>();
 
