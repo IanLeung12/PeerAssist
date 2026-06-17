@@ -11,11 +11,19 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Properties;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javax.swing.JOptionPane;
+import javax.swing.SwingUtilities;
+import javax.swing.SwingWorker;
 import javax.swing.UIManager;
 
 
 public class PeerAssist {
-    public static void main(String[] args) throws InterruptedException {
+
+    private static final Logger LOG = Logger.getLogger(PeerAssist.class.getName());
+
+    public static void main(String[] args) {
         // Modern look-and-feel. Must run before any Swing component is created.
         FlatLaf.registerCustomDefaultsSource("themes"); // themes/FlatLaf.properties: refined green accent
         FlatLightLaf.setup();
@@ -31,31 +39,88 @@ public class PeerAssist {
         if (url == null || url.isEmpty() || publishableKey == null || publishableKey.isEmpty()) {
             throw new RuntimeException("supabase.url and supabase.publishableKey must be set in supabase.properties");
         }
-        Database db = new Database(url, publishableKey);
+        final Database db = new Database(url, publishableKey);
 
-        // Login loop
-        LoginDisplay login = new LoginDisplay(db);
-        while (login.getUser() == null) {
-            login.refresh();
-            Thread.sleep(5);
-        }
-        User user = login.getUser();
-        login.dispose();
-
-        // Load data after authenticating (Row Level Security requires a session)
-        ArrayList<User> users = db.loadUsers();
-        ArrayList<Document> documents = db.loadDocs(users);
-
-        // Main loop
-        MainDisplay md = new MainDisplay(user, documents, users, db);
-        while (true) {
-            md.refresh();
-            try {
-                Thread.sleep(5);
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
+        // Ensure a best-effort logout when the JVM shuts down.
+        Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    db.logout();
+                } catch (Exception e) {
+                    LOG.log(Level.FINE, "Shutdown logout failed", e);
+                }
             }
-        }
+        }));
+
+        SwingUtilities.invokeLater(new Runnable() {
+            @Override
+            public void run() {
+                showLogin(db);
+            }
+        });
+    }
+
+    /**
+     * showLogin
+     * Shows the login screen and wires the success callback so that, on a
+     * successful authentication, the app loads its data off the EDT and then
+     * builds the main display. Logging out returns here.
+     *
+     * @param db The Supabase database client.
+     */
+    private static void showLogin(final Database db) {
+        final LoginDisplay login = new LoginDisplay(db);
+        login.setOnLoginSuccess(new java.util.function.Consumer<User>() {
+            @Override
+            public void accept(final User user) {
+                login.dispose();
+                loadAndShowMain(db, user);
+            }
+        });
+    }
+
+    /**
+     * loadAndShowMain
+     * Loads users and documents on a background worker, then builds the main
+     * display on the EDT. On failure, shows an error dialog and returns to login.
+     *
+     * @param db   The Supabase database client.
+     * @param user The authenticated user.
+     */
+    private static void loadAndShowMain(final Database db, final User user) {
+        new SwingWorker<Object[], Void>() {
+            @Override
+            protected Object[] doInBackground() {
+                ArrayList<User> users = db.loadUsers();
+                ArrayList<Document> documents = db.loadDocs(users);
+                return new Object[]{users, documents};
+            }
+
+            @Override
+            @SuppressWarnings("unchecked")
+            protected void done() {
+                try {
+                    Object[] result = get();
+                    ArrayList<User> users = (ArrayList<User>) result[0];
+                    ArrayList<Document> documents = (ArrayList<Document>) result[1];
+                    Runnable onLogout = new Runnable() {
+                        @Override
+                        public void run() {
+                            showLogin(db);
+                        }
+                    };
+                    new MainDisplay(user, documents, users, db, onLogout);
+                } catch (Exception e) {
+                    LOG.log(Level.FINE, "Failed to load data after login", e);
+                    JOptionPane.showMessageDialog(null,
+                            "Could not load data from the server. Please try again.",
+                            "PeerAssist", JOptionPane.ERROR_MESSAGE);
+                    db.logout();
+                    showLogin(db);
+                }
+            }
+        }.execute();
     }
 
     /**
