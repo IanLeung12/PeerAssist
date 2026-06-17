@@ -8,7 +8,6 @@ package org.example; /**
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
@@ -46,7 +45,7 @@ public class Document{
             this.name = file.getName();
             this.document = Loader.loadPDF(file);
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            throw new RuntimeException("Failed to load PDF from " + pathname, e);
         }
         this.maxMark = maxMark;
         this.gradeLevel = gradeLevel;
@@ -63,10 +62,9 @@ public class Document{
         this.topics = topics;
         this.reviews = new ArrayList<>();
         try {
-            ByteArrayInputStream byteStream = new ByteArrayInputStream(content);
             this.document = Loader.loadPDF(content);
         } catch (IOException e) {
-            e.printStackTrace();
+            throw new RuntimeException("Failed to load PDF content for document " + ID, e);
         }
     }
 
@@ -78,17 +76,19 @@ public class Document{
      */
     @Override
     public String toString() {
-        String str = "";
-        str = str + ID + "," + user.getID() + "," + pathname + "," + maxMark + "," + gradeLevel + ",";
-        for (int i = 0; i < DisplayConst.subjectArr.length; i ++) {
-            if (topics.contains(DisplayConst.subjectArr[i])) {
-                str = str + "1";
+        StringBuilder str = new StringBuilder();
+        str.append(ID).append(",")
+                .append(user != null ? user.getID() : "")
+                .append(",")
+                .append(name).append(",");
+        for (int i = 0; i < DisplayConst.subjectArr.length; i++) {
+            if (topics != null && topics.contains(DisplayConst.subjectArr[i])) {
+                str.append("1");
             } else {
-                str = str + "0";
+                str.append("0");
             }
         }
-
-        return str;
+        return str.toString();
     }
 
     public byte[] convertToBytes(){
@@ -98,7 +98,7 @@ public class Document{
             document.save(byteStream);
             bytePDF = byteStream.toByteArray();
         } catch(Exception e) {
-            e.printStackTrace();
+            throw new RuntimeException("Failed to serialize PDF for document " + ID, e);
         }
         return bytePDF;
     }
@@ -167,6 +167,16 @@ public class Document{
     }
 
     /**
+     * avgPercent
+     * Returns the average mark as a fraction of the maximum mark, in the range
+     * 0..1. Returns 0 when the maximum mark is not positive.
+     * @return double The average mark divided by the maximum mark (0..1)
+     */
+    public double avgPercent() {
+        return maxMark <= 0 ? 0 : avgMark / maxMark;
+    }
+
+    /**
      * getGradeLevel
      * Returns the grade level associated with the document.
      * @return int The grade level associated with the document
@@ -211,7 +221,7 @@ public class Document{
     public static class MarkComparator implements Comparator<Document> {
         @Override
         public int compare(Document o1, Document o2) {
-            return (int) (o2.avgMark - o1.avgMark);
+            return Double.compare(o2.avgMark, o1.avgMark);
         }
     }
 
@@ -222,7 +232,7 @@ public class Document{
     public static class GradeComparator implements Comparator<Document> {
         @Override
         public int compare(Document o1, Document o2) {
-            return (int) (o2.gradeLevel - o1.gradeLevel);
+            return Integer.compare(o2.gradeLevel, o1.gradeLevel);
         }
     }
 
@@ -233,7 +243,7 @@ public class Document{
     public static class ReviewComparator implements Comparator<Document> {
         @Override
         public int compare(Document o1, Document o2) {
-            return (int) (o2.reviews.size() - o1.reviews.size());
+            return Integer.compare(o2.reviews.size(), o1.reviews.size());
         }
     }
 }
