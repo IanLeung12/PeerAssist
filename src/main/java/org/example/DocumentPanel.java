@@ -1,393 +1,710 @@
 package org.example; /**
  * [DocumentPanel.java]
- * Panel that displays the review page for a document
+ * Panel that displays the review page for a document. The PDF is shown in a
+ * scrollable centre area; the reviews (and the form for adding a new one) are
+ * shown in a scrollable side area. Everything uses real layout managers so the
+ * page reflows with the window size.
  * @author Ian Leung
- * @version 1.0 January 22, 2024
+ * @version 3.0
  */
 
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.rendering.PDFRenderer;
-import javax.swing.*;
+
+import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
+import javax.swing.ImageIcon;
+import javax.swing.JButton;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JSplitPane;
+import javax.swing.JTextArea;
+import javax.swing.JTextField;
+import javax.swing.SwingWorker;
+import javax.swing.border.EmptyBorder;
 import javax.swing.text.AbstractDocument;
 import javax.swing.text.AttributeSet;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.DocumentFilter;
-import java.awt.*;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Dimension;
+import java.awt.Font;
+import java.awt.FlowLayout;
 import java.awt.Graphics;
-import java.awt.geom.RoundRectangle2D;
+import java.awt.Graphics2D;
+import java.awt.Image;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 
-public class DocumentPanel extends JLayeredPane {
+public class DocumentPanel extends JPanel {
 
-    private Document document;
-    private PDDocument pdf;
-    private User user;
-    private Database db;
-    int pageNum;
-    int pages;
+    private static final Color BACKGROUND = new Color(150, 217, 136);
+    private static final Color PDF_BACKGROUND = new Color(85, 121, 97);
+    private static final int MAX_COMMENT_LENGTH = 500;
+
+    private final Document document;
+    private final PDDocument pdf;
+    private final User user;
+    private final Database db;
+    private final int pages;
+
+    private ReviewPanel reviewPanel;
 
     /**
      * DocumentPanel
-     * Constructs a DocumentPanel with the specified user and document.
-     * Initializes various components to display document information and reviews.
-     * @param user The user associated with the document
+     * Constructs a DocumentPanel for the given user and document, building a
+     * NORTH header, a CENTER PDF view and an EAST review view.
+     * @param user The user viewing the document
      * @param document The document to be displayed
+     * @param db The Supabase database client
      */
     DocumentPanel(User user, Document document, Database db) {
         this.db = db;
         this.document = document;
         this.user = user;
-        this.pageNum = 0;
-        pages = document.getDocument().getNumberOfPages();
+        this.pdf = document.getDocument();
+        this.pages = pdf.getNumberOfPages();
 
-        pdf = document.getDocument();
+        setLayout(new BorderLayout());
+        setBackground(BACKGROUND);
 
+        add(buildHeader(), BorderLayout.NORTH);
 
-        GraphicsPanel graphicsPanel = new GraphicsPanel();
+        PdfPanel pdfPanel = new PdfPanel();
+        JScrollPane pdfScroll = new JScrollPane(pdfPanel);
+        pdfScroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        pdfScroll.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+        pdfScroll.getVerticalScrollBar().setUnitIncrement(22);
+        pdfScroll.setBorder(BorderFactory.createEmptyBorder());
 
-        PdfPanel documentPanel = new PdfPanel(pdf);
-        JScrollPane documentScrollPane = new JScrollPane(documentPanel);
-        documentScrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
-        documentScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
-        documentScrollPane.getVerticalScrollBar().setUnitIncrement(22);
-        documentScrollPane.setBounds(50, 100, 1020, 900);
+        reviewPanel = new ReviewPanel();
+        JScrollPane reviewScroll = new JScrollPane(reviewPanel);
+        reviewScroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        reviewScroll.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+        reviewScroll.getVerticalScrollBar().setUnitIncrement(14);
+        reviewScroll.setBorder(BorderFactory.createEmptyBorder());
 
-
-        ReviewPanel reviewPanel = new ReviewPanel();
-        JScrollPane reviewScrollPane = new JScrollPane(reviewPanel);
-        reviewScrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
-        reviewScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
-        reviewScrollPane.getVerticalScrollBar().setUnitIncrement(14);
-        reviewScrollPane.setBounds(1100, 380 + 40 * (document.getTopics().size()/3), 600, 500);
-
-        add(graphicsPanel, 1);
-        add(documentScrollPane, 0);
-        add(reviewScrollPane, 0);
-        setBackground(new Color(150, 217, 136));
-        setSize(DisplayConst.size);
-        setVisible(true);
+        JSplitPane split = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, pdfScroll, reviewScroll);
+        split.setResizeWeight(0.62);
+        split.setBorder(BorderFactory.createEmptyBorder());
+        split.setBackground(BACKGROUND);
+        // EAST review area ~38% of the width.
+        split.setDividerLocation(0.62);
+        add(split, BorderLayout.CENTER);
     }
 
     /**
-     * GraphicsPanel
-     * Inner class representing a graphics panel within the DocumentPanel.
-     * Displays document information using graphics and text.
+     * buildHeader
+     * Builds the NORTH header from real JLabels: title, author (profile + name),
+     * grade, topic badges and the average mark. No absolute drawString.
+     * @return the header panel
      */
-    private class GraphicsPanel extends JPanel {
-        GraphicsPanel() {
-            setBackground(new Color(150, 217, 136));
-            setSize(DisplayConst.size);
-            setVisible(true);
+    private JPanel buildHeader() {
+        JPanel header = new JPanel();
+        header.setBackground(BACKGROUND);
+        header.setLayout(new BoxLayout(header, BoxLayout.Y_AXIS));
+        header.setBorder(new EmptyBorder(16, 24, 12, 24));
 
-        }
+        JLabel title = new JLabel(safe(document.getName(), "Untitled"));
+        title.setFont(new Font("Helvetica", Font.BOLD, 40));
+        title.setForeground(Color.BLACK);
+        title.setAlignmentX(Component.LEFT_ALIGNMENT);
+        header.add(title);
+        header.add(Box.createVerticalStrut(8));
 
-        public void paintComponent(Graphics g) {
-            super.paintComponent(g);
-            Graphics2D g2d = (Graphics2D) g;
-            setDoubleBuffered(true);
+        // Author row: profile icon + name.
+        JPanel authorRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        authorRow.setOpaque(false);
+        authorRow.setAlignmentX(Component.LEFT_ALIGNMENT);
+        authorRow.add(new JLabel(scaledIcon(DisplayConst.profile, 40)));
+        String authorName = (document.getUser() != null && document.getUser().getName() != null)
+                ? document.getUser().getName() : "Unknown";
+        JLabel author = new JLabel(authorName);
+        author.setFont(new Font("Helvetica", Font.PLAIN, 28));
+        authorRow.add(author);
+        header.add(authorRow);
 
-            g2d.drawImage(DisplayConst.logo, 890, 0, null);
+        JLabel grade = new JLabel("Grade: " + document.getGradeLevel());
+        grade.setFont(new Font("Helvetica", Font.PLAIN, 22));
+        grade.setForeground(Color.BLACK);
+        grade.setAlignmentX(Component.LEFT_ALIGNMENT);
+        header.add(grade);
+        header.add(Box.createVerticalStrut(8));
 
-            g.setColor(Color.black);
-            g.setFont(new Font("Helvetica", Font.BOLD, 52));
-            g.drawString(document.getName(), 1100, 150);
-
-            g2d.drawImage(DisplayConst.profile, 1100, 165, 50, 50, null);
-            g.setFont(new Font("Helvetica", Font.PLAIN, 36));
-            g.drawString(document.getUser().getName(), 1170, 205);
-            g.setFont(new Font("Helvetica", Font.PLAIN, 28));
-            g.drawString("Grade: " + document.getGradeLevel(), 1100, 245);
-
-            g2d.setFont(new Font("Helvetica", Font.PLAIN, 18));
-            for (int i = 0; i < document.getTopics().size(); i ++) {
-                g2d.setColor(new Color(47, 114, 27, 207));
-                g2d.fillRoundRect(1100 + 205 * i - 615 * (i/3), 260 + 40 * (i/3),
-                        190, 30, 10, 15);
-                g2d.setColor(Color.white);
-                g2d.drawString(document.getTopics().get(i), 1110 + 205 * i - 615 * (i/3),  280 + 40 * (i/3));
+        // Topic badges in a wrapping row.
+        ArrayList<String> topics = document.getTopics();
+        if (topics != null && !topics.isEmpty()) {
+            JPanel topicsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 6));
+            topicsPanel.setOpaque(false);
+            topicsPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+            for (String topic : topics) {
+                topicsPanel.add(new Badge(topic));
             }
-
-            g.setFont(new Font("Helvetica", Font.BOLD, 42));
-            double average = document.getAvgMark()/document.getMaxMark();
-            g.setColor(new Color((int) (255 - average*255), 15, (int) (average * 255)));
-            g.drawString("Average Mark:                  "  + Math.round(average*1000.0)/10.0 + "%",
-                    1100, 340 + 40 * (document.getTopics().size()/3));
-
+            header.add(topicsPanel);
         }
+
+        header.add(Box.createVerticalStrut(8));
+
+        double percent = document.avgPercent();
+        JLabel average = new JLabel("Average Mark: " + Math.round(percent * 1000.0) / 10.0 + "%");
+        average.setFont(new Font("Helvetica", Font.BOLD, 30));
+        average.setForeground(new Color(clamp((int) (255 - percent * 255)), 15, clamp((int) (percent * 255))));
+        average.setAlignmentX(Component.LEFT_ALIGNMENT);
+        header.add(average);
+
+        return header;
+    }
+
+    /**
+     * Badge
+     * Small rounded label used to display a topic tag.
+     */
+    private static class Badge extends JLabel {
+        Badge(String text) {
+            super(text);
+            setForeground(Color.WHITE);
+            setFont(new Font("Helvetica", Font.PLAIN, 16));
+            setOpaque(false);
+            setBorder(new EmptyBorder(5, 12, 5, 12));
+        }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            Graphics2D g2d = (Graphics2D) g.create();
+            g2d.setColor(new Color(47, 114, 27, 207));
+            g2d.fillRoundRect(0, 0, getWidth(), getHeight(), 14, 14);
+            g2d.dispose();
+            super.paintComponent(g);
+        }
+    }
+
+    /**
+     * scaledIcon
+     * Builds a square ImageIcon scaled from the given image. Safe even when the
+     * source is the 1x1 fallback image.
+     * @param src the source image
+     * @param size the width and height in pixels
+     * @return the scaled icon
+     */
+    private static ImageIcon scaledIcon(BufferedImage src, int size) {
+        Image scaled = src.getScaledInstance(size, size, Image.SCALE_SMOOTH);
+        return new ImageIcon(scaled);
+    }
+
+    /**
+     * clamp
+     * Clamps a colour component into the legal 0..255 range.
+     */
+    private static int clamp(int v) {
+        if (v < 0) {
+            return 0;
+        }
+        return Math.min(v, 255);
+    }
+
+    /**
+     * safe
+     * Returns the given string, or a default when it is null or blank.
+     */
+    private static String safe(String s, String def) {
+        return (s == null || s.trim().isEmpty()) ? def : s;
     }
 
     /**
      * PdfPanel
-     * Inner class representing a panel for displaying the pages of a PDF document.
-     * Uses PDFRenderer to render pages and displays them in the panel.
+     * Renders the pages of the PDF, centring each page horizontally within the
+     * available width. Rendering failures surface a user-facing message rather
+     * than a silent stack trace.
      */
-    private class PdfPanel extends JPanel{
+    private class PdfPanel extends JPanel {
 
-        BufferedImage[] pdfPages;
-        private PDFRenderer pdfRenderer;
+        private final BufferedImage[] pdfPages;
+        private int maxPageWidth = 1;
+        private int totalHeight = 50;
+        private boolean renderFailed = false;
 
-        /**
-         * PdfPanel
-         * Constructs a pdfpanel
-         * @param pdf the pdf
-         */
-        PdfPanel(PDDocument pdf) {
-            setBackground(new Color(85, 121, 97));
-
-            pdfRenderer = new PDFRenderer(pdf);
+        PdfPanel() {
+            setBackground(PDF_BACKGROUND);
             pdfPages = new BufferedImage[pages];
 
             try {
-                int totalHeight = 0;
-                for (int i = 0; i < pages; i ++) {
-                    pdfPages[i] = pdfRenderer.renderImage(i);
-                    totalHeight += 50 + pdfPages[i].getHeight();
+                PDFRenderer renderer = new PDFRenderer(pdf);
+                int height = 0;
+                for (int i = 0; i < pages; i++) {
+                    pdfPages[i] = renderer.renderImage(i);
+                    height += 50 + pdfPages[i].getHeight();
+                    maxPageWidth = Math.max(maxPageWidth, pdfPages[i].getWidth());
                 }
-                setPreferredSize(new Dimension(1000, totalHeight + 50));
+                totalHeight = height + 50;
             } catch (Exception e) {
-                e.printStackTrace();
+                renderFailed = true;
+                totalHeight = 200;
             }
-
         }
 
-        public void paintComponent(Graphics g) {
+        @Override
+        public Dimension getPreferredSize() {
+            // Track the viewport width so pages stay centred; ensure the page
+            // itself always fits.
+            int viewportWidth = (getParent() != null) ? getParent().getWidth() : 0;
+            int width = Math.max(maxPageWidth + 40, viewportWidth);
+            return new Dimension(width, totalHeight);
+        }
+
+        @Override
+        protected void paintComponent(Graphics g) {
             super.paintComponent(g);
             Graphics2D g2d = (Graphics2D) g;
-            setDoubleBuffered(true);
 
-            for (int i = 0; i < pages; i ++) {
-
-                g2d.drawImage(pdfPages[i], 500 - pdfPages[i].getWidth()/2, 40 + i * (50 + pdfPages[i].getHeight()),null);
+            if (renderFailed) {
+                g2d.setColor(Color.WHITE);
+                g2d.setFont(new Font("Helvetica", Font.PLAIN, 20));
+                g2d.drawString("This document could not be displayed.", 30, 60);
+                return;
             }
 
-
+            int y = 40;
+            for (int i = 0; i < pages; i++) {
+                BufferedImage page = pdfPages[i];
+                if (page == null) {
+                    continue;
+                }
+                int x = (getWidth() - page.getWidth()) / 2;
+                if (x < 0) {
+                    x = 0;
+                }
+                g2d.drawImage(page, x, y, null);
+                y += 50 + page.getHeight();
+            }
         }
-
-
     }
 
     /**
      * ReviewPanel
-     * Inner class representing a panel for displaying reviews and adding new reviews.
+     * Vertical list of reviews with a form, at the top, for adding a new review.
      */
     private class ReviewPanel extends JPanel {
 
+        private final JButton reviewButton;
+        private final JTextArea commentField;
+        private final JScrollPane commentScroll;
+        private final JTextField markField;
+        private final JButton cancelButton;
+        private final JButton postButton;
+        private final JPanel formPanel;
+        private final JPanel listPanel;
 
-        /**
-         * ReviewPanel constructor
-         * Initializes the ReviewPanel with buttons, text fields, and other components for user interaction.
-         * Also populates the panel with existing reviews if available.
-         */
         ReviewPanel() {
-            setBackground(new Color(150, 217, 136));
-            ArrayList<commentBox> commentBoxes = new ArrayList<>();
+            setBackground(BACKGROUND);
+            setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
+            setBorder(new EmptyBorder(20, 16, 20, 16));
 
-            JButton reviewButton = new JButton("Add a review");
-            reviewButton.setBounds(150, 20, 300, 75);
-            reviewButton.setBackground(new Color(24, 134, 14, 178));
-            reviewButton.setBorderPainted(false);
+            reviewButton = new JButton("Add a review");
+            reviewButton.setBackground(new Color(24, 134, 14));
+            reviewButton.setForeground(Color.WHITE);
+            reviewButton.setFont(new Font("Helvetica", Font.BOLD, 20));
+            reviewButton.setFocusPainted(false);
+            reviewButton.setAlignmentX(Component.LEFT_ALIGNMENT);
+            reviewButton.setMaximumSize(new Dimension(Integer.MAX_VALUE, 50));
 
-            JTextField commentField = new CustomTextField("Add a comment");
-            commentField.setBounds(20, 50, 560, 30);
+            commentField = new JTextArea(4, 20);
+            commentField.setLineWrap(true);
+            commentField.setWrapStyleWord(true);
             commentField.setFont(new Font("Helvetica", Font.PLAIN, 18));
             commentField.setBackground(new Color(165, 236, 150));
-            commentField.setVisible(false);
+            ((AbstractDocument) commentField.getDocument()).setDocumentFilter(new LengthFilter(MAX_COMMENT_LENGTH));
+            commentScroll = new JScrollPane(commentField);
+            commentScroll.setAlignmentX(Component.LEFT_ALIGNMENT);
+            commentScroll.setMaximumSize(new Dimension(Integer.MAX_VALUE, 120));
 
-            JTextField markField = createNumericTextField("Mark (Out of " + document.getMaxMark() + ")");
-            markField.setBounds(20, 100, 250, 30);
+            markField = createNumericTextField("Mark (Out of " + trimMark(document.getMaxMark()) + ")");
             markField.setFont(new Font("Helvetica", Font.PLAIN, 18));
             markField.setBackground(new Color(165, 236, 150));
-            markField.setVisible(false);
+            markField.setAlignmentX(Component.LEFT_ALIGNMENT);
+            markField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 32));
 
-            JButton cancelButton = new JButton("Cancel");
-            cancelButton.setBounds(300, 100, 100, 30);
-            cancelButton.setBackground(new Color(236, 36, 36, 178));
-            cancelButton.setBorderPainted(false);
-            cancelButton.setVisible(false);
+            cancelButton = new JButton("Cancel");
+            cancelButton.setBackground(new Color(199, 70, 70));
+            cancelButton.setForeground(Color.WHITE);
+            cancelButton.setFocusPainted(false);
 
-            JButton postButton = new JButton("Post Review");
-            postButton.setBounds(430, 100, 150, 30);
-            postButton.setBackground(new Color(74, 159, 21, 178));
-            postButton.setBorderPainted(false);
-            postButton.setVisible(false);
+            postButton = new JButton("Post Review");
+            postButton.setBackground(new Color(74, 159, 21));
+            postButton.setForeground(Color.WHITE);
+            postButton.setFocusPainted(false);
 
-            reviewButton.addActionListener(e -> {
-                commentField.setVisible(true);
-                markField.setVisible(true);
-                cancelButton.setVisible(true);
-                postButton.setVisible(true);
-                reviewButton.setVisible(false);
-            });
+            JPanel buttonRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+            buttonRow.setOpaque(false);
+            buttonRow.setAlignmentX(Component.LEFT_ALIGNMENT);
+            buttonRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 44));
+            buttonRow.add(cancelButton);
+            buttonRow.add(postButton);
 
+            formPanel = new JPanel();
+            formPanel.setOpaque(false);
+            formPanel.setLayout(new BoxLayout(formPanel, BoxLayout.Y_AXIS));
+            formPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+            formPanel.add(commentScroll);
+            formPanel.add(Box.createVerticalStrut(8));
+            formPanel.add(markField);
+            formPanel.add(Box.createVerticalStrut(8));
+            formPanel.add(buttonRow);
+            formPanel.setVisible(false);
+
+            reviewButton.addActionListener(e -> showForm(true));
             cancelButton.addActionListener(e -> {
                 commentField.setText("");
-                commentField.setVisible(false);
                 markField.setText("");
-                markField.setVisible(false);
-                cancelButton.setVisible(false);
-                postButton.setVisible(false);
-                reviewButton.setVisible(true);
+                showForm(false);
             });
+            postButton.addActionListener(e -> postReview());
 
-            final int[] currentY = {0};
-            postButton.addActionListener(e -> {
-                String comment = commentField.getText();
-                commentField.setText("");
-                commentField.setVisible(false);
+            listPanel = new JPanel();
+            listPanel.setOpaque(false);
+            listPanel.setLayout(new BoxLayout(listPanel, BoxLayout.Y_AXIS));
+            listPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-                double mark;
-                if (markField.getText().isEmpty()) {
-                    mark = 0;
-                } else {
-                    mark = Double.parseDouble(markField.getText());
-                    if (mark > document.getMaxMark()) {
-                        mark = document.getMaxMark();
-                    } else if (mark < 0) {
-                        mark = 0;
-                    }
-                }
-
-                markField.setText("");
-                reviewButton.setVisible(true);
-                markField.setVisible(false);
-                cancelButton.setVisible(false);
-                postButton.setVisible(false);
-
-                Review newReview = new Review(user, mark, comment);
-                document.addReview(newReview);
-                db.addReview(document, newReview);
-                commentBox commentBox = new commentBox(newReview);
-                commentBox.setBounds(20, 150 + currentY[0], 565, commentBox.getHeight() + 5);
-                currentY[0] += commentBox.getHeight() + 20;
-                commentBoxes.add(commentBox);
-                add(commentBox);
-                setPreferredSize(new Dimension(600, 200 + currentY[0]));
-            });
-
-
-            for (Review review: document.getReviews()) { // Review layout, panel size changes based on review volume
-                commentBox commentBox = new commentBox(review);
-                commentBox.setBounds(20, 150 + currentY[0], 565, commentBox.getHeight() + 5);
-                currentY[0] += commentBox.getHeight() + 20;
-                commentBoxes.add(commentBox);
-                add(commentBox);
-                setPreferredSize(new Dimension(600, 200 + currentY[0]));
+            for (Review review : document.getReviews()) {
+                addCommentBox(review);
             }
 
             add(reviewButton);
-            add(commentField);
-            add(markField);
-            add(cancelButton);
-            add(postButton);
-            setLayout(null);
+            add(Box.createVerticalStrut(10));
+            add(formPanel);
+            add(Box.createVerticalStrut(14));
+            add(listPanel);
+            add(Box.createVerticalGlue());
+        }
+
+        /**
+         * showForm
+         * Toggles between the "add a review" button and the review form.
+         * @param visible true to show the form, false to show the button
+         */
+        private void showForm(boolean visible) {
+            formPanel.setVisible(visible);
+            reviewButton.setVisible(!visible);
+            revalidate();
+            repaint();
+        }
+
+        /**
+         * postReview
+         * Validates the form, then posts the review on a background worker so the
+         * UI never blocks. The Post button is disabled while the request runs.
+         */
+        private void postReview() {
+            final String comment = commentField.getText() == null ? "" : commentField.getText().trim();
+
+            String markText = markField.getText() == null ? "" : markField.getText().trim();
+            double parsed;
+            if (markText.isEmpty()) {
+                parsed = 0;
+            } else {
+                try {
+                    parsed = Double.parseDouble(markText);
+                } catch (NumberFormatException ex) {
+                    JOptionPane.showMessageDialog(DocumentPanel.this,
+                            "Please enter a valid numeric mark.", "Invalid mark",
+                            JOptionPane.WARNING_MESSAGE);
+                    return;
+                }
+                if (parsed < 0) {
+                    parsed = 0;
+                } else if (parsed > document.getMaxMark()) {
+                    parsed = document.getMaxMark();
+                }
+            }
+            final double mark = parsed;
+            final Review newReview = new Review(user, mark, comment);
+
+            postButton.setEnabled(false);
+            cancelButton.setEnabled(false);
+            final String original = postButton.getText();
+            postButton.setText("Posting...");
+
+            new SwingWorker<Void, Void>() {
+                @Override
+                protected Void doInBackground() {
+                    db.addReview(document, newReview);
+                    return null;
+                }
+
+                @Override
+                protected void done() {
+                    postButton.setEnabled(true);
+                    cancelButton.setEnabled(true);
+                    postButton.setText(original);
+                    try {
+                        get();
+                    } catch (Exception ex) {
+                        JOptionPane.showMessageDialog(DocumentPanel.this,
+                                "Could not post your review. Please try again.",
+                                "PeerAssist", JOptionPane.ERROR_MESSAGE);
+                        return;
+                    }
+                    document.addReview(newReview);
+                    commentField.setText("");
+                    markField.setText("");
+                    showForm(false);
+                    addCommentBox(newReview);
+                    listPanel.revalidate();
+                    listPanel.repaint();
+                }
+            }.execute();
+        }
+
+        /**
+         * addCommentBox
+         * Appends a comment box for the given review to the list.
+         * @param review the review to display
+         */
+        private void addCommentBox(Review review) {
+            CommentBox box = new CommentBox(review);
+            box.setAlignmentX(Component.LEFT_ALIGNMENT);
+            listPanel.add(box);
+            listPanel.add(Box.createVerticalStrut(12));
+        }
+
+        /**
+         * removeCommentBox
+         * Removes the given comment box (and its trailing strut) from the list,
+         * used after a successful delete of the user's own review.
+         * @param box the box to remove
+         */
+        private void removeCommentBox(CommentBox box) {
+            int index = -1;
+            Component[] children = listPanel.getComponents();
+            for (int i = 0; i < children.length; i++) {
+                if (children[i] == box) {
+                    index = i;
+                    break;
+                }
+            }
+            if (index < 0) {
+                return;
+            }
+            listPanel.remove(box);
+            // Remove the trailing strut that followed the box, if present.
+            if (index < listPanel.getComponentCount()) {
+                listPanel.remove(index);
+            }
+            listPanel.revalidate();
+            listPanel.repaint();
         }
 
         /**
          * createNumericTextField
-         * Creates a textfield that only accepts numeric values
-         * @param text default text
-         * @return numeric textfield
+         * Creates a text field that only accepts a non-negative decimal number.
+         * @param text placeholder text
+         * @return the numeric text field
          */
         private JTextField createNumericTextField(String text) {
-            JTextField textField = new CustomTextField(text);
-            AbstractDocument document = (AbstractDocument) textField.getDocument();
-            document.setDocumentFilter(new NumericFilter());
-            return textField;
+            JTextField field = new CustomTextField(text);
+            AbstractDocument doc = (AbstractDocument) field.getDocument();
+            doc.setDocumentFilter(new NumericFilter());
+            return field;
         }
 
         /**
-         * NumericFilter
-         * This class extends DocumentFilter to restrict input to numeric values in a JTextField.
+         * CommentBox
+         * Displays a single review: author (profile + name), the comment as a
+         * wrapping JTextArea, the mark as a percentage, and — for the user's own
+         * review — a delete control.
          */
-        private class NumericFilter extends DocumentFilter {
-            @Override
-            public void insertString(FilterBypass fb, int offset, String string, AttributeSet attr)
-                    throws BadLocationException {
-                if (isNumeric(string)) {
-                    super.insertString(fb, offset, string, attr);
-                }
-            }
+        private class CommentBox extends JPanel {
 
-            @Override
-            public void replace(FilterBypass fb, int offset, int length, String text, AttributeSet attrs)
-                    throws BadLocationException {
-                if (isNumeric(text)) {
-                    super.replace(fb, offset, length, text, attrs);
-                }
-            }
+            private final Review review;
 
-            private boolean isNumeric(String text) {
-                return text.matches("\\d*");
-            }
-        }
-
-        /**
-         * commentBox
-         * Inner class representing a panel for displaying individual comments within the ReviewPanel.
-         * Displays user information, comments, and marks in a visually appealing way.
-         */
-        private class commentBox extends JPanel {
-
-            Review review;
-            ArrayList<String> lines;
-
-            commentBox(Review review) {
+            CommentBox(Review review) {
                 this.review = review;
+                setOpaque(false);
+                setLayout(new BorderLayout(8, 6));
+                setBorder(new EmptyBorder(10, 14, 10, 14));
+                setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
 
-                lines = new ArrayList<>();
-                setBackground(new Color(0,0,0,0));
-                String[] words = review.getComments().split("\\s+");
-                StringBuilder currentLine = new StringBuilder();
+                // Top row: profile + name on the left, mark + (optional) delete on the right.
+                JPanel top = new JPanel(new BorderLayout());
+                top.setOpaque(false);
 
-                // Bounds string within box
-                for (String word : words) {
-                    if (currentLine.length() + word.length() <= 50) {
-                        currentLine.append(word).append(" ");
-                    } else {
-                        lines.add(currentLine.toString().trim());
-                        currentLine = new StringBuilder(word + " ");
+                JPanel authorRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+                authorRow.setOpaque(false);
+                authorRow.add(new JLabel(scaledIcon(DisplayConst.profile, 28)));
+                String name = (review.getUser() != null && review.getUser().getName() != null)
+                        ? review.getUser().getName() : "Unknown";
+                JLabel nameLabel = new JLabel(name);
+                nameLabel.setFont(new Font("Helvetica", Font.PLAIN, 20));
+                authorRow.add(nameLabel);
+                top.add(authorRow, BorderLayout.WEST);
+
+                JPanel rightRow = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+                rightRow.setOpaque(false);
+
+                double percent = document.getMaxMark() <= 0 ? 0 : review.getMark() / document.getMaxMark();
+                JLabel markLabel = new JLabel(Math.round(percent * 1000.0) / 10.0 + "%");
+                markLabel.setFont(new Font("Helvetica", Font.BOLD, 20));
+                markLabel.setForeground(new Color(clamp((int) (255 - percent * 255)), 15,
+                        clamp((int) (percent * 255))));
+                rightRow.add(markLabel);
+
+                if (review.getUser() != null && user != null
+                        && review.getUser().getID() != null
+                        && review.getUser().getID().equals(user.getID())) {
+                    JButton deleteButton = new JButton("Delete");
+                    deleteButton.setBackground(new Color(199, 70, 70));
+                    deleteButton.setForeground(Color.WHITE);
+                    deleteButton.setFont(new Font("Helvetica", Font.PLAIN, 13));
+                    deleteButton.setFocusPainted(false);
+                    deleteButton.addActionListener(e -> deleteOwnReview(deleteButton));
+                    rightRow.add(deleteButton);
+                }
+
+                top.add(rightRow, BorderLayout.EAST);
+                add(top, BorderLayout.NORTH);
+
+                String commentText = review.getComments() == null ? "" : review.getComments();
+                if (!commentText.trim().isEmpty()) {
+                    JTextArea commentArea = new JTextArea(commentText);
+                    commentArea.setLineWrap(true);
+                    commentArea.setWrapStyleWord(true);
+                    commentArea.setEditable(false);
+                    commentArea.setOpaque(false);
+                    commentArea.setFont(new Font("Helvetica", Font.PLAIN, 16));
+                    commentArea.setBorder(new EmptyBorder(4, 0, 0, 0));
+                    add(commentArea, BorderLayout.CENTER);
+                }
+            }
+
+            /**
+             * deleteOwnReview
+             * Confirms with the user, then deletes the user's own review on a
+             * background worker and refreshes the list on success.
+             * @param trigger the delete button, disabled while the request runs
+             */
+            private void deleteOwnReview(final JButton trigger) {
+                int choice = JOptionPane.showConfirmDialog(DocumentPanel.this,
+                        "Delete your review?", "Delete review",
+                        JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
+                if (choice != JOptionPane.YES_OPTION) {
+                    return;
+                }
+                trigger.setEnabled(false);
+                new SwingWorker<Void, Void>() {
+                    @Override
+                    protected Void doInBackground() {
+                        db.deleteReview(document, review);
+                        return null;
                     }
-                }
 
-                lines.add(currentLine.toString().trim());
-
-                setSize(560, 50 + lines.size() * 25);
-                setVisible(true);
-
+                    @Override
+                    protected void done() {
+                        try {
+                            get();
+                        } catch (Exception ex) {
+                            trigger.setEnabled(true);
+                            JOptionPane.showMessageDialog(DocumentPanel.this,
+                                    "Could not delete your review. Please try again.",
+                                    "PeerAssist", JOptionPane.ERROR_MESSAGE);
+                            return;
+                        }
+                        document.getReviews().remove(review);
+                        removeCommentBox(CommentBox.this);
+                    }
+                }.execute();
             }
 
+            @Override
             protected void paintComponent(Graphics g) {
-                super.paintComponent(g);
-
-                Graphics2D g2d = (Graphics2D) g;
-                RoundRectangle2D roundedRectangle = new RoundRectangle2D.Float(0, 0, 560, this.getHeight() - 2, 50, 50);
-
-
+                Graphics2D g2d = (Graphics2D) g.create();
                 g2d.setColor(new Color(111, 183, 94, 203));
-                g2d.fill(roundedRectangle);
-
-                g2d.setColor(Color.black);
-                g2d.draw(roundedRectangle);
-
-                g2d.drawImage(DisplayConst.profile, 10, 10, 30, 30, null);
-                g2d.setFont(new Font("Helvetica", Font.PLAIN, 24));
-                g2d.drawString(review.getUser().getName(), 50 , 35);
-
-                g2d.setFont(new Font("Helvetica", Font.PLAIN, 18));
-                for (int i = 0; i < lines.size(); i ++) {
-                    g2d.drawString(lines.get(i), 20, 65 + 25 * i);
-                }
-
-                // Changes based on percent
-                double percent = review.getMark()/document.getMaxMark();
-                g2d.setColor(new Color((int) (255 - percent*255), 15, (int) (percent * 255)));
-                g2d.setFont(new Font("Helvetica", Font.PLAIN, 24));
-                g2d.drawString(Math.round(percent*1000.0)/10.0 + "%", 470, 30);
-
+                g2d.fillRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 30, 30);
+                g2d.setColor(Color.BLACK);
+                g2d.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 30, 30);
+                g2d.dispose();
+                super.paintComponent(g);
             }
+        }
+    }
 
+    /**
+     * trimMark
+     * Formats a max mark for display, dropping a redundant ".0".
+     */
+    private static String trimMark(double mark) {
+        if (mark == Math.floor(mark) && !Double.isInfinite(mark)) {
+            return String.valueOf((long) mark);
+        }
+        return String.valueOf(mark);
+    }
+
+    /**
+     * NumericFilter
+     * Restricts a field to a non-negative decimal number, allowing at most one
+     * decimal point.
+     */
+    private static class NumericFilter extends DocumentFilter {
+        @Override
+        public void insertString(FilterBypass fb, int offset, String string, AttributeSet attr)
+                throws BadLocationException {
+            String current = fb.getDocument().getText(0, fb.getDocument().getLength());
+            String proposed = current.substring(0, offset) + string + current.substring(offset);
+            if (isValid(proposed)) {
+                super.insertString(fb, offset, string, attr);
+            }
         }
 
+        @Override
+        public void replace(FilterBypass fb, int offset, int length, String text, AttributeSet attrs)
+                throws BadLocationException {
+            String current = fb.getDocument().getText(0, fb.getDocument().getLength());
+            String proposed = current.substring(0, offset) + text + current.substring(offset + length);
+            if (isValid(proposed)) {
+                super.replace(fb, offset, length, text, attrs);
+            }
+        }
+
+        private boolean isValid(String text) {
+            // Allow empty, an integer, or a decimal with a single point.
+            return text.matches("\\d*\\.?\\d*");
+        }
+    }
+
+    /**
+     * LengthFilter
+     * Caps the total length of a document at a maximum number of characters.
+     */
+    private static class LengthFilter extends DocumentFilter {
+        private final int max;
+
+        LengthFilter(int max) {
+            this.max = max;
+        }
+
+        @Override
+        public void insertString(FilterBypass fb, int offset, String string, AttributeSet attr)
+                throws BadLocationException {
+            if (string == null) {
+                return;
+            }
+            if (fb.getDocument().getLength() + string.length() <= max) {
+                super.insertString(fb, offset, string, attr);
+            }
+        }
+
+        @Override
+        public void replace(FilterBypass fb, int offset, int length, String text, AttributeSet attrs)
+                throws BadLocationException {
+            if (text == null) {
+                text = "";
+            }
+            if (fb.getDocument().getLength() - length + text.length() <= max) {
+                super.replace(fb, offset, length, text, attrs);
+            }
+        }
     }
 }

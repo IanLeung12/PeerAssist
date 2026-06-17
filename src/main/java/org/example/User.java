@@ -11,7 +11,6 @@ public class User {
     private String name;
     private int gradeLevel;
     private String email;
-    private String password;
     private ArrayList<String> subjects;
 
     /**
@@ -21,15 +20,13 @@ public class User {
      * @param name       The name of the user.
      * @param gradeLevel The grade level of the user.
      * @param email      The email address of the user.
-     * @param password   The password associated with the user's account.
      * @param subjects   The list of subjects that the user is interested in or associated with.
      */
-    public User(String ID, String name, int gradeLevel, String email,  String password, ArrayList<String> subjects) {
+    public User(String ID, String name, int gradeLevel, String email, ArrayList<String> subjects) {
         this.ID = ID;
         this.name = name;
         this.email = email;
         this.gradeLevel = gradeLevel;
-        this.password = password;
         this.subjects = subjects;
     }
 
@@ -37,16 +34,22 @@ public class User {
      * toString
      * Returns a string representation of the User object.
      *
-     * @return A string containing user information in the format: "ID, name, gradeLevel, email, password, subjects".
+     * @return A string containing user information in the format: "ID, name, gradeLevel, email, subjects".
      */
     @Override
     public String toString() {
-        String str = ID + "," + name + "," + gradeLevel + "," + email + "," + password + ",";
+        StringBuilder str = new StringBuilder();
+        str.append(ID).append(",")
+                .append(name).append(",")
+                .append(gradeLevel).append(",")
+                .append(email).append(",");
 
-        for (String subject: subjects) {
-            str = str + subject + " ";
+        if (subjects != null) {
+            for (String subject : subjects) {
+                str.append(subject).append(" ");
+            }
         }
-        return str;
+        return str.toString();
     }
 
     /**
@@ -79,16 +82,6 @@ public class User {
 
     public String getEmail() {
         return email;
-    }
-
-    /**
-     * getPassword
-     * Retrieves the password associated with the user's account.
-     *
-     * @return The user's password.
-     */
-    public String getPassword() {
-        return password;
     }
 
     public ArrayList<String> getSubjects() {

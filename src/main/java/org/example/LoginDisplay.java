@@ -1,30 +1,49 @@
 package org.example; /**
  * [LoginDisplay.java]
- * Display Frame class for users to login/sign up before entering main program
+ * Login / sign-up window shown before the main program. Uses real layout
+ * managers (BorderLayout + CardLayout + GridBagLayout) so it fits any screen,
+ * runs authentication off the Event Dispatch Thread on a SwingWorker, and shows
+ * specific, inline error messages derived from {@link AuthException}.
  * @author Ian Leung
- * @version 1.0 January 22, 2024
+ * @version 3.0
  */
 
-import java.awt.Graphics;
+import javax.swing.BorderFactory;
+import javax.swing.ImageIcon;
+import javax.swing.JButton;
+import javax.swing.JComboBox;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.ScrollPaneConstants;
+import javax.swing.SwingConstants;
+import javax.swing.SwingWorker;
+import javax.swing.Timer;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.Font;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Image;
+import java.awt.Insets;
 import java.awt.image.BufferedImage;
-import java.io.File;
-import java.io.IOException;
-import javax.imageio.ImageIO;
-import javax.swing.*;
-import java.awt.*;
 import java.util.ArrayList;
+import java.util.concurrent.ExecutionException;
+import java.util.function.Consumer;
+import java.util.regex.Pattern;
 
 public class LoginDisplay {
 
-    private JFrame frame;
-    private JLayeredPane lframe;
-    private JPanel gPanel;
-    private JPanel iPanel;
-    private String action = "login";
-    private User user;
-    private boolean failedLogin = false;
-    private boolean failedSignUp = false;
-    private Database db;
+    private static final Color BACKGROUND = new Color(150, 217, 136);
+    private static final Color ERROR_RED = new Color(176, 0, 32);
+    private static final Pattern EMAIL = Pattern.compile("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$");
+    private static final int MIN_PASSWORD = 6;
+
+    private final JFrame frame;
+    private final Database db;
+    private Consumer<User> onLoginSuccess;
 
     /**
      * Constructor for LoginDisplay.
@@ -32,223 +51,392 @@ public class LoginDisplay {
      * @param db The Supabase database client.
      */
     public LoginDisplay(Database db) {
-        this.frame = new JFrame("Login");
         this.db = db;
-        lframe = new JLayeredPane();
-        lframe.setSize(DisplayConst.size);
+        this.frame = new JFrame("PeerAssist — Sign In");
 
-        gPanel = new GridAreaPanel();
-        gPanel.setBackground(new Color(150, 217, 136));
-        gPanel.setSize(DisplayConst.size);
-        gPanel.setOpaque(true);
-        iPanel = addUserInterface();
-        iPanel.setSize(DisplayConst.size);
-        iPanel.setOpaque(false);
+        frame.setLayout(new BorderLayout());
+        frame.add(buildLogoHeader(), BorderLayout.NORTH);
+        frame.add(buildLoginCard(), BorderLayout.CENTER);
 
-        lframe.add(gPanel, 0, 0);
-        lframe.add(iPanel, 1, 0);
-
-        frame.add(lframe);
-        frame.pack();
-
-        frame.setExtendedState(JFrame.MAXIMIZED_BOTH);
+        frame.getContentPane().setBackground(BACKGROUND);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        DisplayConst.enableFullScreen(frame);
         frame.setSize(DisplayConst.size);
+        frame.setExtendedState(JFrame.MAXIMIZED_BOTH);
+        frame.setLocationRelativeTo(null);
         frame.setVisible(true);
     }
 
     /**
-     * Adds the user interface components to the panel.
+     * setOnLoginSuccess
+     * Registers the callback invoked (on the EDT) with the authenticated user
+     * after a successful login or sign up.
      *
-     * @return The panel containing the user interface components.
+     * @param cb The success callback.
      */
-    private JPanel addUserInterface() {
-        JPanel buttonPanel = new JPanel();
-        JButton switchButton;
-
-        CustomTextField usernameField = new CustomTextField(
-                action.equals("login") ? "Enter Email" : "Enter Username");
-        CustomPasswordField passwordField = new CustomPasswordField("Enter Password");
-        usernameField.setBounds((DisplayConst.size.width/2 - 300), 100, 600, 50);
-        passwordField.setBounds((DisplayConst.size.width/2 - 300), 200, 600, 50);
-        usernameField.setFont(new Font("Helvetica", Font.PLAIN, 24));
-        passwordField.setFont(new Font("Helvetica", Font.PLAIN, 24));
-        buttonPanel.add(usernameField);
-        buttonPanel.add(passwordField);
-
-        if (action.equals("login")) {
-            JButton loginButton = new JButton("Login");
-            loginButton.setBounds(DisplayConst.size.width/2 - 100, 300, 200, 50);
-            loginButton.addActionListener(e -> {
-                String email = usernameField.getText();
-                String password = passwordField.getText();
-
-                User loggedIn = db.logIn(email, password);
-                if (loggedIn != null) {
-                    this.user = loggedIn;
-                } else {
-                    failedLogin = true;
-                }
-            });
-
-            // Switch between login and signup
-            switchButton = new JButton("Create an account");
-            switchButton.setBounds(DisplayConst.size.width/2 - 75, 900, 150, 30);
-            switchButton.addActionListener(e -> {
-                action = "sign up";
-                failedLogin = false;
-                newIPanel();
-            });
-
-            buttonPanel.add(loginButton);
-            buttonPanel.add(switchButton);
-
-        } else if (action.equals("sign up")) {
-            CustomTextField emailField = new CustomTextField("Enter Email");
-            emailField.setBounds((DisplayConst.size.width/2 - 300), 300, 600, 50);
-            emailField.setFont(new Font("Helvetica", Font.PLAIN, 24));
-
-            // Components only used in signing up
-            Integer[] grades = new Integer[]{1,2,3,4,5,6,7,8,9,10,11,12};
-            JComboBox<Integer> gradeChooser = new JComboBox<>(grades);
-            gradeChooser.setSelectedIndex(0);
-            gradeChooser.setBounds(DisplayConst.size.width/2 + 120,400, 60, 40);
-
-            JToggleButton[] subjectButtons = new JToggleButton[11];
-            for (int i = 0; i < 11; i ++) {
-                subjectButtons[i] = new JToggleButton(DisplayConst.subjectArr[i]);
-                subjectButtons[i].setBounds(350 + (200 * i) - 1100 * (i/6), 550 + 100 *  (i/6), 150, 50);
-                buttonPanel.add(subjectButtons[i]);
-            }
-
-            JButton signUpButton = new JButton("Create Account");
-            signUpButton.setBounds(DisplayConst.size.width/2 - 100, 800, 200, 50);
-            signUpButton.addActionListener(e -> {
-
-                //Takes values from all components to create a user;
-                String username = usernameField.getText();
-                String password = passwordField.getText();
-                String email = emailField.getText();
-                int grade = (int) gradeChooser.getSelectedItem();
-                ArrayList<String> subjects = new ArrayList<>();
-                for (int i = 0; i < 11; i ++) {
-                    if (subjectButtons[i].isSelected()) {
-                        subjects.add(DisplayConst.subjectArr[i]);
-                    }
-                }
-                if (!fieldIsValid(username) || !fieldIsValid(password) || !fieldIsValid(email)) {
-                    failedSignUp = true;
-                } else {
-                    User created = db.signUp(username, grade, email, password, subjects);
-                    if (created != null) {
-                        this.user = created;
-                    } else {
-                        failedSignUp = true;
-                    }
-                }
-
-
-            });
-
-            switchButton = new JButton("Login instead");
-            switchButton.setBounds(DisplayConst.size.width/2 - 75, 900, 150, 30);
-            switchButton.addActionListener(e -> {
-                action = "login";
-                newIPanel();
-                failedSignUp = false;
-            });
-
-            buttonPanel.add(emailField);
-            buttonPanel.add(gradeChooser);
-            buttonPanel.add(signUpButton);
-            buttonPanel.add(switchButton);
-        }
-
-        buttonPanel.setLayout(null);
-
-        return buttonPanel;
+    public void setOnLoginSuccess(Consumer<User> cb) {
+        this.onLoginSuccess = cb;
     }
 
     /**
-     * Checks if the provided field value is valid.
-     *
-     * @param str The field value to be checked.
-     * @return True if the field value is valid, false otherwise.
-     */
-    private boolean fieldIsValid(String str) {
-        if ((str == null) || (str.contains(" "))) {
-            return false;
-        }
-        return true;
-    }
-
-    /**
-     * Reloads the interface panel (for switching between login/signup)
-     */
-    public void newIPanel() {
-        lframe.remove(iPanel);
-        iPanel = addUserInterface();
-        iPanel.setSize(DisplayConst.size);
-        iPanel.setOpaque(false);
-        lframe.add(iPanel, 1, 0);
-//
-    }
-
-    public void refresh() {
-        SwingUtilities.invokeLater(() ->frame.repaint());
-
-    }
-
-    /**
-     * Disposes of the frame.
+     * dispose
+     * Disposes of the window.
      */
     public void dispose() {
         frame.dispose();
     }
 
     /**
-     * Gets the logged-in user.
-     *
-     * @return The logged-in user.
+     * buildLogoHeader
+     * Builds the top banner containing the scaled logo.
      */
-    public User getUser() {
-        return user;
+    private JPanel buildLogoHeader() {
+        JPanel header = new JPanel();
+        header.setBackground(BACKGROUND);
+        header.setBorder(BorderFactory.createEmptyBorder(24, 0, 8, 0));
+        JLabel logo = new JLabel(scaledLogo(120));
+        header.add(logo);
+        return header;
     }
 
-    /*
-    * Inner panel for drawing elements
+    /**
+     * buildLoginCard
+     * Builds the login form (email + password) with inline validation and async
+     * submission. Returns a panel that centres the form.
      */
-    class GridAreaPanel extends JPanel {
+    private JScrollPane buildLoginCard() {
+        CustomTextField emailField = new CustomTextField("Enter Email");
+        CustomPasswordField passwordField = new CustomPasswordField("Enter Password");
+        styleField(emailField);
+        styleField(passwordField);
 
-        public void paintComponent(Graphics g) {
-            super.paintComponent(g);
-            setDoubleBuffered(true);
+        JLabel errorLabel = newErrorLabel();
+        final Timer errorTimer = newErrorTimer(errorLabel);
 
-            Graphics2D g2d = (Graphics2D) g;
+        JButton loginButton = newPrimaryButton("Log In");
+        JButton switchButton = newLinkButton("New here? Create an account");
 
-            g2d.drawImage(DisplayConst.logo, 890, 0, null);
-            g.setColor(Color.black);
-            g.drawString("Release 1.0.0", 30, DisplayConst.size.height - 100);
+        JPanel form = new JPanel(new GridBagLayout());
+        form.setOpaque(false);
+        GridBagConstraints c = baseConstraints();
 
-            // Error/Invalid messages
-            if (failedLogin) {
-                g2d.setColor(Color.red);
-                g2d.setFont(new Font("Helvetica", Font.PLAIN, 14));
-                g2d.drawString("Login failed. Try again or sign up to make a new account", DisplayConst.size.width/ 2 - 175, 390);
+        addRow(form, c, 0, new JLabel("Welcome back", SwingConstants.CENTER), 28f, Font.BOLD);
+        c.gridy = 1; form.add(emailField, c);
+        c.gridy = 2; form.add(passwordField, c);
+        c.gridy = 3; form.add(errorLabel, c);
+        c.gridy = 4; form.add(loginButton, c);
+        c.gridy = 5; form.add(switchButton, c);
+
+        Runnable submit = () -> {
+            String email = emailField.getRealText().trim();
+            String password = passwordField.getRealText();
+            if (email.isEmpty() || password.isEmpty()) {
+                showError(errorLabel, errorTimer, "Please enter your email and password.");
+                return;
+            }
+            if (!EMAIL.matcher(email).matches()) {
+                showError(errorLabel, errorTimer, AuthException.userMessageFor(AuthException.Kind.INVALID_EMAIL));
+                return;
+            }
+            doLogin(email, password, loginButton, errorLabel, errorTimer);
+        };
+        loginButton.addActionListener(e -> submit.run());
+        onEnter(emailField, submit);
+        onEnter(passwordField, submit);
+        switchButton.addActionListener(e -> swapCard(buildSignUpCard(), loginButton));
+
+        frame.getRootPane().setDefaultButton(loginButton);
+        return centeringWrapper(form);
+    }
+
+    /**
+     * buildSignUpCard
+     * Builds the sign-up form (username, email, password, grade, subjects) with
+     * inline validation and async submission.
+     */
+    private JScrollPane buildSignUpCard() {
+        CustomTextField usernameField = new CustomTextField("Enter Username");
+        CustomTextField emailField = new CustomTextField("Enter Email");
+        CustomPasswordField passwordField = new CustomPasswordField("Enter Password (min 6 chars)");
+        styleField(usernameField);
+        styleField(emailField);
+        styleField(passwordField);
+
+        Integer[] grades = new Integer[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
+        JComboBox<Integer> gradeChooser = new JComboBox<>(grades);
+        gradeChooser.setSelectedIndex(0);
+
+        final TopicSelector topicSelector = new TopicSelector(DisplayConst.subjectArr);
+
+        JLabel errorLabel = newErrorLabel();
+        final Timer errorTimer = newErrorTimer(errorLabel);
+
+        JButton createButton = newPrimaryButton("Create Account");
+        JButton switchButton = newLinkButton("Already have an account? Log in");
+
+        JPanel form = new JPanel(new GridBagLayout());
+        form.setOpaque(false);
+        GridBagConstraints c = baseConstraints();
+
+        addRow(form, c, 0, new JLabel("Create your account", SwingConstants.CENTER), 28f, Font.BOLD);
+        c.gridy = 1; form.add(usernameField, c);
+        c.gridy = 2; form.add(emailField, c);
+        c.gridy = 3; form.add(passwordField, c);
+        c.gridy = 4; form.add(labeledRow("Current grade:", gradeChooser), c);
+        c.gridy = 5; form.add(labeledRow("Favourite subjects (optional):", topicSelector), c);
+        c.gridy = 6; form.add(errorLabel, c);
+        c.gridy = 7; form.add(createButton, c);
+        c.gridy = 8; form.add(switchButton, c);
+
+        Runnable submit = () -> {
+            String username = usernameField.getRealText().trim();
+            String email = emailField.getRealText().trim();
+            String password = passwordField.getRealText();
+            if (username.isEmpty()) {
+                showError(errorLabel, errorTimer, "Please enter a username.");
+                return;
+            }
+            if (!EMAIL.matcher(email).matches()) {
+                showError(errorLabel, errorTimer, AuthException.userMessageFor(AuthException.Kind.INVALID_EMAIL));
+                return;
+            }
+            if (password.length() < MIN_PASSWORD) {
+                showError(errorLabel, errorTimer, AuthException.userMessageFor(AuthException.Kind.WEAK_PASSWORD));
+                return;
+            }
+            ArrayList<String> subjects = topicSelector.getSelectedTopics();
+            int grade = (Integer) gradeChooser.getSelectedItem();
+            doSignUp(username, grade, email, password, subjects, createButton, errorLabel, errorTimer);
+        };
+        createButton.addActionListener(e -> submit.run());
+        onEnter(usernameField, submit);
+        onEnter(emailField, submit);
+        onEnter(passwordField, submit);
+        switchButton.addActionListener(e -> swapCard(buildLoginCard(), createButton));
+
+        frame.getRootPane().setDefaultButton(createButton);
+        return centeringWrapper(form);
+    }
+
+    /**
+     * doLogin
+     * Runs the login request on a SwingWorker and reports the result.
+     */
+    private void doLogin(final String email, final String password, final JButton button,
+                         final JLabel errorLabel, final Timer errorTimer) {
+        setBusy(button, true, "Signing in…");
+        new SwingWorker<User, Void>() {
+            @Override
+            protected User doInBackground() throws Exception {
+                return db.logIn(email, password);
             }
 
-            if (failedSignUp) {
-                g2d.setColor(Color.red);
-                g2d.setFont(new Font("Helvetica", Font.PLAIN, 14));
-                g2d.drawString("Sign Up failed. Username may be taken, or username/password/email is invalid", DisplayConst.size.width/ 2 - 210, 875);
+            @Override
+            protected void done() {
+                try {
+                    User user = get();
+                    succeed(user);
+                } catch (ExecutionException ex) {
+                    setBusy(button, false, "Log In");
+                    showError(errorLabel, errorTimer, messageFor(ex.getCause()));
+                } catch (Exception ex) {
+                    setBusy(button, false, "Log In");
+                    showError(errorLabel, errorTimer,
+                            AuthException.userMessageFor(AuthException.Kind.UNKNOWN));
+                }
+            }
+        }.execute();
+    }
+
+    /**
+     * doSignUp
+     * Runs the sign-up request on a SwingWorker and reports the result.
+     */
+    private void doSignUp(final String username, final int grade, final String email,
+                          final String password, final ArrayList<String> subjects,
+                          final JButton button, final JLabel errorLabel, final Timer errorTimer) {
+        setBusy(button, true, "Creating account…");
+        new SwingWorker<User, Void>() {
+            @Override
+            protected User doInBackground() throws Exception {
+                return db.signUp(username, grade, email, password, subjects);
             }
 
-            if (action.equals("sign up")) {
-                g2d.setColor(Color.BLACK);
-                g2d.setFont(new Font("Helvetica", Font.PLAIN, 24));
-                g2d.drawString("Enter Current Grade: ", DisplayConst.size.width/2 - 140, 430);
-                g2d.drawString("Select Favourite Subjects: ", DisplayConst.size.width/2 - 160, 500);
+            @Override
+            protected void done() {
+                try {
+                    User user = get();
+                    succeed(user);
+                } catch (ExecutionException ex) {
+                    setBusy(button, false, "Create Account");
+                    showError(errorLabel, errorTimer, messageFor(ex.getCause()));
+                } catch (Exception ex) {
+                    setBusy(button, false, "Create Account");
+                    showError(errorLabel, errorTimer,
+                            AuthException.userMessageFor(AuthException.Kind.UNKNOWN));
+                }
             }
+        }.execute();
+    }
+
+    /**
+     * succeed
+     * Invokes the success callback with the authenticated user.
+     */
+    private void succeed(User user) {
+        if (onLoginSuccess != null) {
+            onLoginSuccess.accept(user);
         }
+    }
+
+    /**
+     * messageFor
+     * Extracts a specific user-facing message from an auth failure cause.
+     */
+    private String messageFor(Throwable cause) {
+        if (cause instanceof AuthException) {
+            return ((AuthException) cause).getUserMessage();
+        }
+        return AuthException.userMessageFor(AuthException.Kind.UNKNOWN);
+    }
+
+    /**
+     * swapCard
+     * Replaces the centre card with the given panel and refreshes the window.
+     *
+     * @param card           The new centre card.
+     * @param oldDefaultBtn  The button to clear as the root default button.
+     */
+    private void swapCard(java.awt.Component card, JButton oldDefaultBtn) {
+        BorderLayout layout = (BorderLayout) frame.getContentPane().getLayout();
+        java.awt.Component current = layout.getLayoutComponent(BorderLayout.CENTER);
+        if (current != null) {
+            frame.remove(current);
+        }
+        frame.add(card, BorderLayout.CENTER);
+        frame.revalidate();
+        frame.repaint();
+    }
+
+    // ---- small UI helpers -------------------------------------------------
+
+    /**
+     * centeringWrapper
+     * Wraps a form so it stays centred, and adds a scroll pane so tall forms
+     * remain reachable on small screens.
+     */
+    private JScrollPane centeringWrapper(JPanel form) {
+        JPanel center = new JPanel(new GridBagLayout());
+        center.setOpaque(false);
+        center.add(form, new GridBagConstraints());
+
+        JScrollPane scroll = new JScrollPane(center,
+                ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
+                ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+        scroll.setBorder(null);
+        scroll.setOpaque(false);
+        scroll.getViewport().setOpaque(false);
+        scroll.getVerticalScrollBar().setUnitIncrement(16);
+        return scroll;
+    }
+
+    private GridBagConstraints baseConstraints() {
+        GridBagConstraints c = new GridBagConstraints();
+        c.gridx = 0;
+        c.insets = new Insets(8, 0, 8, 0);
+        c.fill = GridBagConstraints.HORIZONTAL;
+        c.weightx = 1;
+        return c;
+    }
+
+    private void addRow(JPanel form, GridBagConstraints c, int y, JLabel label, float size, int style) {
+        label.setFont(label.getFont().deriveFont(style, size));
+        label.setForeground(new Color(26, 72, 21));
+        c.gridy = y;
+        form.add(label, c);
+    }
+
+    private JLabel leftLabel(String text) {
+        JLabel l = new JLabel(text);
+        l.setFont(new Font("Helvetica", Font.PLAIN, 16));
+        l.setForeground(new Color(26, 72, 21));
+        return l;
+    }
+
+    private JPanel labeledRow(String text, java.awt.Component field) {
+        JPanel row = new JPanel(new BorderLayout(10, 0));
+        row.setOpaque(false);
+        row.add(leftLabel(text), BorderLayout.WEST);
+        row.add(field, BorderLayout.EAST);
+        return row;
+    }
+
+    private void styleField(javax.swing.JTextField field) {
+        field.setFont(new Font("Helvetica", Font.PLAIN, 20));
+        field.setPreferredSize(new Dimension(420, 44));
+        field.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(90, 150, 80)),
+                BorderFactory.createEmptyBorder(4, 10, 4, 10)));
+    }
+
+    private JButton newPrimaryButton(String text) {
+        JButton b = new JButton(text);
+        b.setFont(new Font("Helvetica", Font.BOLD, 20));
+        b.setBackground(new Color(59, 138, 51));
+        b.setForeground(Color.WHITE);
+        b.setFocusPainted(false);
+        b.setPreferredSize(new Dimension(420, 48));
+        return b;
+    }
+
+    private JButton newLinkButton(String text) {
+        JButton b = new JButton(text);
+        b.setFont(new Font("Helvetica", Font.PLAIN, 15));
+        b.setBorderPainted(false);
+        b.setContentAreaFilled(false);
+        b.setFocusPainted(false);
+        b.setForeground(new Color(26, 72, 21));
+        return b;
+    }
+
+    private JLabel newErrorLabel() {
+        JLabel l = new JLabel(" ", SwingConstants.CENTER);
+        l.setFont(new Font("Helvetica", Font.PLAIN, 15));
+        l.setForeground(ERROR_RED);
+        return l;
+    }
+
+    private Timer newErrorTimer(final JLabel label) {
+        Timer t = new Timer(7000, e -> label.setText(" "));
+        t.setRepeats(false);
+        return t;
+    }
+
+    private void showError(JLabel label, Timer timer, String message) {
+        label.setText(message);
+        timer.restart();
+    }
+
+    private void setBusy(JButton button, boolean busy, String text) {
+        button.setEnabled(!busy);
+        button.setText(text);
+    }
+
+    private void onEnter(javax.swing.JTextField field, final Runnable action) {
+        field.addActionListener(e -> action.run());
+    }
+
+    /**
+     * scaledLogo
+     * Returns the logo scaled to the given height (aspect preserved). Safe even
+     * when the underlying image is the 1x1 fallback.
+     */
+    private ImageIcon scaledLogo(int height) {
+        BufferedImage src = DisplayConst.logo;
+        if (src == null || src.getWidth() <= 1) {
+            return new ImageIcon(new BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB));
+        }
+        Image scaled = src.getScaledInstance(-1, height, Image.SCALE_SMOOTH);
+        return new ImageIcon(scaled);
     }
 }

@@ -57,12 +57,13 @@ public class Review {
 
     /**
      * toString
-     * Returns a string representation of the Review object in the format: "userID, mark, comments".
+     * Returns a string representation of the Review object. The free-text
+     * comment is intentionally omitted to avoid leaking content into logs.
      *
-     * @return A string containing the user's ID, mark, and comments.
+     * @return A string containing the reviewer's ID and mark.
      */
     @Override
     public String toString() {
-        return user.getID() + "," + mark + "," + comments;
+        return "Review{reviewer=" + user.getID() + ", mark=" + mark + "}";
     }
 }
