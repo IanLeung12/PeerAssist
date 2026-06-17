@@ -1,31 +1,48 @@
 package org.example; /**
  * [MainDisplay.java]
- * Display frame class that is in charge of the main Graphical User Interface
+ * Display frame class that is in charge of the main Graphical User Interface.
+ * Hosts the home panel and the per-document review panel, swapping between them
+ * with a CardLayout, and provides the global header (back, profile, logout).
  * @author Ian Leung
- * @version 1.0 January 22, 2024
+ * @version 3.0
  */
 
-import java.awt.Graphics;
-import javax.swing.*;
-import java.awt.*;
+import javax.swing.BorderFactory;
+import javax.swing.ImageIcon;
+import javax.swing.JButton;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import java.awt.BorderLayout;
+import java.awt.CardLayout;
+import java.awt.Color;
+import java.awt.Font;
+import java.awt.Image;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
-import java.io.File;
-import java.io.FileNotFoundException;
+import java.awt.image.BufferedImage;
 import java.util.ArrayList;
-import java.io.PrintWriter;
 
 public class MainDisplay {
 
-    private JFrame frame;
-    private JLayeredPane lframe;
-    private HomePanel homePanel;
+    private static final Color BACKGROUND = new Color(150, 217, 136);
+    private static final Color HEADER = new Color(120, 199, 104);
+    private static final String HOME_CARD = "home";
+    private static final String DOCUMENT_CARD = "document";
+
+    private final JFrame frame;
+    private final JPanel content;
+    private final CardLayout cardLayout;
+    private final HomePanel homePanel;
     private DocumentPanel documentPanel;
-    private JButton backButton;
-    ArrayList<Document> documents;
-    ArrayList<User> users;
-    private User user;
-    private Database db;
+    private final JButton backButton;
+
+    private final ArrayList<Document> documents;
+    private final ArrayList<User> users;
+    private final User user;
+    private final Database db;
+    private final Runnable onLogout;
 
     /**
      * Constructor for MainDisplay.
@@ -33,105 +50,156 @@ public class MainDisplay {
      * @param user      The current user using the PeerAssist Platform.
      * @param documents The list of documents available on the platform.
      * @param users     The list of users registered on the platform.
+     * @param db        The Supabase database client.
+     * @param onLogout  Callback run after the user logs out (returns to login).
      */
-    public MainDisplay(User user, ArrayList<Document> documents, ArrayList<User> users, Database db) {
+    public MainDisplay(User user, ArrayList<Document> documents, ArrayList<User> users, Database db,
+                       Runnable onLogout) {
         this.user = user;
         this.documents = documents;
         this.users = users;
         this.db = db;
+        this.onLogout = onLogout;
+
         this.frame = new JFrame("PeerAssist");
-        lframe = new JLayeredPane();
 
+        // Header: WEST back button, EAST profile + name + logout.
+        this.backButton = new JButton("< Back");
+        backButton.setBackground(new Color(59, 138, 51));
+        backButton.setForeground(Color.WHITE);
+        backButton.setFont(new Font("Helvetica", Font.BOLD, 20));
+        backButton.setFocusPainted(false);
+        backButton.setVisible(false);
+        backButton.addActionListener(e -> backToHome());
 
-        homePanel = new HomePanel(documents, this,  user, db);
+        JPanel headerLeft = new JPanel(new BorderLayout());
+        headerLeft.setOpaque(false);
+        headerLeft.add(backButton, BorderLayout.WEST);
 
-        lframe.add(homePanel, 1);
+        JLabel profileLabel = new JLabel(scaledProfileIcon(44));
+        profileLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 8));
 
-        DrawPanel drawPanel = new DrawPanel();
-        drawPanel.setSize(DisplayConst.size);
-        drawPanel.setBackground(new Color(0,0,0,0));
-        drawPanel.setVisible(true);
+        JLabel nameLabel = new JLabel(user != null && user.getName() != null ? user.getName() : "User");
+        nameLabel.setFont(new Font("Helvetica", Font.PLAIN, 22));
+        nameLabel.setForeground(Color.BLACK);
+
+        JButton logoutButton = new JButton("Log Out");
+        logoutButton.setBackground(new Color(199, 70, 70));
+        logoutButton.setForeground(Color.WHITE);
+        logoutButton.setFont(new Font("Helvetica", Font.BOLD, 16));
+        logoutButton.setFocusPainted(false);
+        logoutButton.addActionListener(e -> confirmLogout());
+
+        JPanel headerRight = new JPanel();
+        headerRight.setOpaque(false);
+        headerRight.add(profileLabel);
+        headerRight.add(nameLabel);
+        headerRight.add(logoutButton);
+
+        JPanel header = new JPanel(new BorderLayout());
+        header.setBackground(HEADER);
+        header.setBorder(BorderFactory.createEmptyBorder(10, 16, 10, 16));
+        header.add(headerLeft, BorderLayout.WEST);
+        header.add(headerRight, BorderLayout.EAST);
+
+        // Content: home panel and document panel swapped via CardLayout.
+        this.cardLayout = new CardLayout();
+        this.content = new JPanel(cardLayout);
+        this.content.setBackground(BACKGROUND);
+
+        this.homePanel = new HomePanel(documents, this, user, db);
+        content.add(homePanel, HOME_CARD);
+
+        frame.setLayout(new BorderLayout());
+        frame.add(header, BorderLayout.NORTH);
+        frame.add(content, BorderLayout.CENTER);
+
+        // Best-effort logout on window close, then exit.
+        frame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
         frame.addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosing(WindowEvent e) {
-                db.close();
-                super.windowClosing(e);
+                try {
+                    db.logout();
+                } finally {
+                    db.close();
+                    frame.dispose();
+                    System.exit(0);
+                }
             }
         });
 
-        lframe.add(drawPanel, 0);
-        lframe.setLayout(null);
-
-        frame.add(lframe);
-        frame.pack();
-
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        DisplayConst.enableFullScreen(frame);
         frame.setExtendedState(JFrame.MAXIMIZED_BOTH);
         frame.setSize(DisplayConst.size);
+        frame.setLocationRelativeTo(null);
         frame.setVisible(true);
     }
 
-    public void refresh()    {
-        SwingUtilities.invokeLater(() ->frame.repaint());
-    }
-
     /**
-     * Goes to the document display/ reviewing panel.
+     * setToDocumentPanel
+     * Switches the content area to the document review panel for the given
+     * document, showing the back button.
      *
      * @param document The document to be displayed.
      */
     public void setToDocumentPanel(Document document) {
-        homePanel.setVisible(false);
+        if (documentPanel != null) {
+            content.remove(documentPanel);
+        }
         documentPanel = new DocumentPanel(user, document, db);
+        content.add(documentPanel, DOCUMENT_CARD);
+        cardLayout.show(content, DOCUMENT_CARD);
         backButton.setVisible(true);
-        lframe.add(documentPanel, 1);
+        content.revalidate();
+        content.repaint();
     }
 
     /**
-     * Returns to the home panel.
+     * backToHome
+     * Returns the content area to the home panel and hides the back button.
      */
     public void backToHome() {
-        homePanel.setVisible(true);
-        lframe.remove(documentPanel);
+        cardLayout.show(content, HOME_CARD);
+        if (documentPanel != null) {
+            content.remove(documentPanel);
+            documentPanel = null;
+        }
         backButton.setVisible(false);
+        content.revalidate();
+        content.repaint();
     }
 
-    private class DrawPanel extends JPanel {
-
-        DrawPanel() {
-            backButton = new JButton("< Back");
-            backButton.setBackground(new Color(59, 138, 51, 216));
-            backButton.setBorderPainted(false);
-            backButton.setBounds(50, 20, 250, 60);
-            backButton.setForeground(Color.WHITE);
-            backButton.setFont(new Font("Helvetica", Font.BOLD, 48));
-            backButton.addActionListener(e -> {
-                backToHome();
-            });
-            backButton.setVisible(false);
-            add(backButton);
-            setLayout(null);
+    /**
+     * confirmLogout
+     * Confirms with the user, then logs out, disposes this frame and runs the
+     * logout callback (which returns to the login screen).
+     */
+    private void confirmLogout() {
+        int choice = JOptionPane.showConfirmDialog(frame,
+                "Are you sure you want to log out?", "Log Out",
+                JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
+        if (choice != JOptionPane.YES_OPTION) {
+            return;
         }
-
-        public void paintComponent(Graphics g) {
-            super.paintComponent(g);
-
-            Graphics2D g2d = (Graphics2D) g;
-            setDoubleBuffered(true);
-
-            // Things drawn here are always visible (on main panel)
-            g2d.drawImage(DisplayConst.profile, DisplayConst.size.width - 100, 20, 80, 80, null);
-            g.setColor(Color.black);
-            g.setFont(new Font("Helvetica", Font.PLAIN, 36));
-            drawRightAlignedString(g, user.getName(), DisplayConst.size.width - 120,  70);
-
+        db.logout();
+        frame.dispose();
+        if (onLogout != null) {
+            onLogout.run();
         }
+    }
 
-        private void drawRightAlignedString(Graphics g, String text, int x, int y) {
-            FontMetrics fontMetrics = g.getFontMetrics();
-            int textWidth = fontMetrics.stringWidth(text);
-            int xCoordinate = x - textWidth;
-            g.drawString(text, xCoordinate, y);
-        }
+    /**
+     * scaledProfileIcon
+     * Builds a square ImageIcon from the shared profile image, scaled to the
+     * requested size. Safe even when the underlying image is the 1x1 fallback.
+     *
+     * @param size The width and height, in pixels.
+     * @return The scaled icon.
+     */
+    private ImageIcon scaledProfileIcon(int size) {
+        BufferedImage src = DisplayConst.profile;
+        Image scaled = src.getScaledInstance(size, size, Image.SCALE_SMOOTH);
+        return new ImageIcon(scaled);
     }
 }
